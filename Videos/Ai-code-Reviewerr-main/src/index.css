@@ -1,0 +1,243 @@
+/* ===== IMPROVED COLORS / VISIBILITY FIX ===== */
+
+
+/* MAIN BACKGROUND */
+
+html,
+body,
+#root {
+    height: 100%;
+    background: #0d1117;
+    color: #c9d1d9;
+}
+
+
+/* GENERAL PANELS / CARDS */
+
+.card,
+.panel,
+.section,
+.sidebar,
+.topbar {
+    background: #161b22;
+    border: 1px solid #30363d;
+}
+
+
+/* SIDEBAR */
+
+.sidebar {
+    background: #161b22;
+    border-right: 1px solid #30363d;
+}
+
+
+/* NORMAL TEXT */
+
+.text-muted,
+.small-text,
+.label,
+.nav-item,
+.tab-btn {
+    color: #8b949e !important;
+}
+
+
+/* MAIN TEXT */
+
+body,
+p,
+span,
+div {
+    color: #c9d1d9;
+}
+
+
+/* ACTIVE BLUE */
+
+.nav-item.active,
+.tab-btn.active {
+    color: #58a6ff !important;
+    border-color: #58a6ff !important;
+    background: rgba(88, 166, 255, 0.12);
+}
+
+
+/* BUTTONS */
+
+.btn-primary {
+    background: linear-gradient(135deg, #1f6feb, #58a6ff);
+    color: white;
+    border: none;
+    box-shadow: 0 4px 20px rgba(88, 166, 255, 0.35);
+}
+
+.btn-primary:hover {
+    box-shadow: 0 8px 28px rgba(88, 166, 255, 0.5);
+}
+
+.btn-ghost {
+    background: transparent;
+    border: 1px solid #30363d;
+    color: #c9d1d9;
+}
+
+.btn-ghost:hover {
+    border-color: #58a6ff;
+    color: #58a6ff;
+    background: rgba(88, 166, 255, 0.08);
+}
+
+
+/* EDITOR */
+
+.editor,
+.code-editor,
+textarea,
+.code-area {
+    background: #111827 !important;
+    color: #e6edf3 !important;
+    border-color: #30363d !important;
+    caret-color: #58a6ff;
+}
+
+
+/* LINE NUMBERS */
+
+.line-numbers {
+    background: #161b22;
+    color: #6e7681;
+}
+
+
+/* INPUTS */
+
+input,
+textarea {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    color: #e6edf3;
+}
+
+input:focus,
+textarea:focus {
+    border-color: #58a6ff;
+    outline: none;
+}
+
+
+/* TOP BAR */
+
+.topbar {
+    background: #161b22;
+    border-bottom: 1px solid #30363d;
+}
+
+
+/* ISSUE CARDS */
+
+.issue-card {
+    background: #161b22 !important;
+    border: 1px solid #30363d !important;
+}
+
+.issue-card:hover {
+    background: #1c2128 !important;
+    border-color: #58a6ff !important;
+}
+
+
+/* CHART / GRAPH CONTAINERS */
+
+.recharts-wrapper {
+    background: transparent;
+}
+
+
+/* SCORE CARDS */
+
+.score-card,
+.score-hover {
+    background: #161b22;
+    border: 1px solid #30363d;
+}
+
+
+/* SUCCESS */
+
+.success {
+    color: #3fb950;
+}
+
+
+/* WARNING */
+
+.warning {
+    color: #d29922;
+}
+
+
+/* ERROR */
+
+.error,
+.critical {
+    color: #f85149;
+}
+
+
+/* SCROLLBAR */
+
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #0d1117;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #30363d;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #484f58;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+warning {
+    color: #d29922;
+}
+
+
+/* ERROR */
+
+.error,
+.critical {
+    color: #f85149;
+}
+
+
+/* SCROLLBAR */
+
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #0d1117;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #30363d;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #484f58;
+}
