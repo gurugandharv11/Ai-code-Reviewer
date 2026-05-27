@@ -16,7 +16,7 @@ import emailjs from "@emailjs/browser";
 // FIREBASE
 // ─────────────────────────────────────────────────────────────────
 const firebaseApp = initializeApp({
-  apiKey: "AIzaSyCulPnzUg86Szlcb85HIJUnkOX0Q3N1-zw",
+  apiKey: "AIzaSyBJaDzd1YljsMb5jarGA73-Hsjbel58O6o",
   authDomain: "guruai-reviewer.firebaseapp.com",
   projectId: "guruai-reviewer",
   storageBucket: "guruai-reviewer.firebasestorage.app",
@@ -310,19 +310,31 @@ function runSecurityScan(code: string) {
 // AI HELPERS
 // ─────────────────────────────────────────────────────────────────
 async function callAI(prompt: string): Promise<string> {
-  const r = await fetch("https://api.anthropic.com/v1/messages", {
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "anthropic-dangerous-direct-browser-access": "true",
+      "x-api-key": "",
+      "anthropic-version": "2023-06-01",
+    },
     body: JSON.stringify({
       model: "claude-sonnet-4-20250514",
       max_tokens: 1000,
       messages: [{ role: "user", content: prompt }],
     }),
   });
-  const d = await r.json();
-  return d.content?.map((c: any) => c.text || "").join("") || "";
-}
 
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error((err as any)?.error?.message || `HTTP ${response.status}`);
+  }
+
+  const data = await response.json();
+  const text = data.content?.[0]?.text;
+  if (!text) throw new Error("Empty response from AI");
+  return tex
+}
 const aiExplain = (issue: any) =>
   callAI(`You are Guru AI, a senior code security expert.\n\nIssue: ${issue.title} (${issue.severity})\nLine: ${issue.line}\nSnippet: ${issue.snippet}\nFix: ${issue.fix}\n\nExplain: 1) Why it's dangerous  2) Real attack scenario  3) Fixed code example  4) Best practice. Be concise.`);
 
@@ -334,7 +346,6 @@ const aiOptimize = (code: string, lang: string) =>
 
 const aiChat = (msg: string, code: string, history: any[]) =>
   callAI(`You are Guru AI, expert code assistant.\n${code ? `Code:\n\`\`\`\n${code.slice(0, 800)}\n\`\`\`` : ""}\n${history.slice(-4).map(h => `${h.role}: ${h.content}`).join("\n")}\n\nUser: ${msg}\n\nAnswer concisely with code examples where helpful.`);
-
 // ─────────────────────────────────────────────────────────────────
 // LANGUAGE DETECTION
 // ─────────────────────────────────────────────────────────────────
@@ -965,22 +976,180 @@ function EditorPanel({ code, setCode, onAnalyze, analyzing, results, language, s
   );
 }
 //TCAnalysisPanel 
+
 function TCAnalysisPanel({ code, language, t }: any) {
+  const [result, setResult] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const analyze = async () => {
+    setLoading(true);
+    setErrorMsg("");
+    const prompt = `You are an expert AI code reviewer and static analyzer.
+
+Your task:
+1. Detect REAL syntax errors accurately.
+2. Detect logical/runtime issues properly.
+3. Generate Time Complexity according to the ACTUAL code only.
+4. Never return fake or generic responses.
+5. Never always return O(n). Analyze loops, recursion, nested loops, maps, sorting, DFS/BFS, DP, binary search, etc correctly.
+6. If no syntax error exists, clearly say: "No syntax errors found."
+
+Rules:
+* Analyze code language automatically.
+* Support Java, C++, Python, JavaScript, TypeScript.
+* Give exact line number for errors when possible.
+* Do not hallucinate errors.
+* Distinguish between syntax errors and warnings.
+* Detect missing semicolons, unmatched brackets, undeclared variables, invalid imports, wrong function calls, type issues, etc.
+
+Output format strictly:
+{
+"syntaxErrors": [],
+"warnings": [],
+"timeComplexity": "",
+"spaceComplexity": "",
+"explanation": ""
+}
+
+Examples:
+* Single loop → O(n)
+* Nested loop → O(n²)
+* Binary Search → O(log n)
+* Merge Sort → O(n log n)
+* HashMap lookup → O(1) average
+* DFS/BFS → O(V + E)
+
+Important:
+* Time complexity MUST depend on actual operations present in the code.
+* If code contains nested loops + sorting, combine complexities properly.
+* Do not generate placeholder outputs.
+* If code is incomplete, clearly mention: "Incomplete code provided."
+
+Code to analyze:
+\`\`\`
+${code.slice(0, 3000)}
+\`\`\`
+`;
+    
+    try {
+      const raw = await callAI(prompt);
+      const clean = raw.replace(/```json|```/g,"").trim();
+      
+      const startIdx = clean.indexOf('{');
+      const endIdx = clean.lastIndexOf('}');
+      if (startIdx === -1 || endIdx === -1) {
+        throw new Error("Invalid AI response: No JSON object found. Response was: " + raw);
+      }
+      
+      const parsed = JSON.parse(clean.slice(startIdx, endIdx+1));
+      setResult(parsed);
+    } catch (e: any) {
+      console.error(e);
+      setErrorMsg(`AI Analysis Failed: ${e.message || "Unknown error"}`);
+      setResult(null); 
+    }
+    setLoading(false);
+  };
+
   return (
-    <div
-      style={{
-        padding: 20,
-        color: "white",
-        fontSize: 20
-      }}
-    >
-      TC Analysis Working 🚀
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <h3 style={{ margin: 0, fontSize: 16, color: t.text }}>Expert Code Review & Complexity Analysis</h3>
+        <button className="btn-primary" style={{ padding: "8px 16px", fontSize: 12, fontWeight: 700 }} onClick={analyze} disabled={loading || !code.trim()}>
+          {loading ? "Analyzing..." : "Run Analysis"}
+        </button>
+      </div>
+      {errorMsg && (
+  <div
+    style={{
+      padding: 12,
+      borderRadius: 8,
+      background: t.redBg,
+      color: t.redText,
+      fontSize: 12,
+      border: `1px solid ${t.red}40`
+    }}
+  >
+    {errorMsg}
+  </div>
+)}
+
+      {!result && !loading && !errorMsg && (
+        <div style={{ padding: 40, textAlign: "center", color: t.textFaint, fontSize: 13 }}>
+          Click "Run Analysis" to get syntax checks and time/space complexity.
+        </div>
+      )}
+
+      {loading && (
+        <div style={{ padding: 40, textAlign: "center", color: t.blue, fontSize: 13, display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 32, height: 32, borderRadius: "50%", border: `3px solid ${t.blue}22`, borderTopColor: t.blue, animation: "spin 1s linear infinite" }} />
+          Analyzing syntax, runtime issues, and complexity...
+        </div>
+      )}
+
+      {result && !loading && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16, animation: "fadeUp 0.3s ease-out" }}>
+          
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 16 }}>
+              <div style={{ fontSize: 10, color: t.textFaint, textTransform: "uppercase", marginBottom: 8, letterSpacing: 0.5 }}>Time Complexity</div>
+              <div style={{ fontSize: 24, fontWeight: 900, color: t.blue, fontFamily: "'Syne',sans-serif" }}>{result.timeComplexity || "N/A"}</div>
+            </div>
+            <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 16 }}>
+              <div style={{ fontSize: 10, color: t.textFaint, textTransform: "uppercase", marginBottom: 8, letterSpacing: 0.5 }}>Space Complexity</div>
+              <div style={{ fontSize: 24, fontWeight: 900, color: t.orange, fontFamily: "'Syne',sans-serif" }}>{result.spaceComplexity || "N/A"}</div>
+            </div>
+          </div>
+
+          <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 16 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: t.redText, marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 16 }}>🚨</span> Syntax Errors ({result.syntaxErrors?.length || 0})
+            </div>
+            {result.syntaxErrors && result.syntaxErrors.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {result.syntaxErrors.map((err: any, i: number) => (
+                  <div key={i} style={{ padding: 10, background: t.redBg, borderRadius: 8, fontSize: 12, borderLeft: `3px solid ${t.red}`, color: t.text }}>
+                    {typeof err === "string" ? err : JSON.stringify(err)}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ fontSize: 12, color: t.green }}>No syntax errors found.</div>
+            )}
+          </div>
+
+          <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 16 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: t.orange, marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 16 }}>⚠️</span> Warnings / Logical Issues ({result.warnings?.length || 0})
+            </div>
+            {result.warnings && result.warnings.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {result.warnings.map((warn: any, i: number) => (
+                  <div key={i} style={{ padding: 10, background: t.orangeBg, borderRadius: 8, fontSize: 12, borderLeft: `3px solid ${t.orange}`, color: t.text }}>
+                    {typeof warn === "string" ? warn : JSON.stringify(warn)}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ fontSize: 12, color: t.green }}>No warnings found.</div>
+            )}
+          </div>
+
+          <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 16 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: t.blue, marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 16 }}>💡</span> Explanation
+            </div>
+            <div style={{ fontSize: 12, color: t.text, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+              {result.explanation || "No explanation provided."}
+            </div>
+          </div>
+          
+        </div>
+      )}
     </div>
   );
 }
-
-
-  // ... render result similar to the widget above
 
 // ─────────────────────────────────────────────────────────────────
 // ISSUES PANEL
@@ -1562,22 +1731,125 @@ export default function App() {
     return () => window.removeEventListener("keydown", h);
   }, []);
 
-  const analyze = useCallback(() => {
+  const analyze = useCallback(async () => {
     if (analyzing || code.trim().length < 10) return;
     setAnalyzing(true);
-    const steps = ["Parsing AST...", "Security scan...", "Pattern matching...", "Computing scores...", "Done!"];
+    const steps = ["Parsing AST...", "AI Code Review...", "Complexity Analysis...", "Generating Report...", "Done!"];
     let i = 0;
     setAStep(steps[0]);
     const iv = setInterval(() => { i++; if (i < steps.length) setAStep(steps[i]); }, 650);
-    setTimeout(() => {
+
+    try {
+      const prompt = `You are an expert AI code reviewer and static analyzer.
+
+Your task:
+1. Detect REAL syntax errors accurately.
+2. Detect logical/runtime issues properly.
+3. Generate Time Complexity according to the ACTUAL code only.
+4. Never return fake or generic responses.
+5. Never always return O(n). Analyze loops, recursion, nested loops, maps, sorting, DFS/BFS, DP, binary search, etc correctly.
+6. If no syntax error exists, clearly say: "No syntax errors found."
+
+Rules:
+* Analyze code language automatically.
+* Support Java, C++, Python, JavaScript, TypeScript.
+* Give exact line number for errors when possible.
+* Do not hallucinate errors.
+* Distinguish between syntax errors and warnings.
+* Detect missing semicolons, unmatched brackets, undeclared variables, invalid imports, wrong function calls, type issues, etc.
+
+Output format strictly:
+{
+"syntaxErrors": [],
+"warnings": [],
+"timeComplexity": "",
+"spaceComplexity": "",
+"explanation": ""
+}
+
+Examples:
+* Single loop → O(n)
+* Nested loop → O(n²)
+* Binary Search → O(log n)
+* Merge Sort → O(n log n)
+* HashMap lookup → O(1) average
+* DFS/BFS → O(V + E)
+
+Important:
+* Time complexity MUST depend on actual operations present in the code.
+* If code contains nested loops + sorting, combine complexities properly.
+* Do not generate placeholder outputs.
+* If code is incomplete, clearly mention: "Incomplete code provided."
+
+Code to analyze:
+\`\`\`
+${code.slice(0, 3000)}
+\`\`\`
+`;
+      const raw = await callAI(prompt);
+      const clean = raw.replace(/```json|```/g,"").trim();
+      
+      const startIdx = clean.indexOf('{');
+      const endIdx = clean.lastIndexOf('}');
+      if (startIdx === -1 || endIdx === -1) {
+        throw new Error("No JSON object found in AI response. Raw: " + raw.slice(0, 100));
+      }
+      
+      const parsed = JSON.parse(clean.slice(startIdx, endIdx+1));
+      
       clearInterval(iv);
-      const r = runSecurityScan(code);
+      
+      const r = runSecurityScan(code); // get base stats
+      
+      const aiIssues: any[] = [];
+      if (parsed.syntaxErrors && Array.isArray(parsed.syntaxErrors)) {
+        parsed.syntaxErrors.forEach((err: any) => {
+          aiIssues.push({
+            severity: "critical",
+            title: "Syntax Error",
+            line: err.line || 1,
+            snippet: typeof err === "string" ? err : JSON.stringify(err),
+            description: "Actual syntax error detected by AI",
+            fix: "Fix syntax error",
+            file: "code"
+          });
+        });
+      }
+      
+      if (parsed.warnings && Array.isArray(parsed.warnings)) {
+        parsed.warnings.forEach((warn: any) => {
+          aiIssues.push({
+            severity: "warning",
+            title: "Logical/Runtime Warning",
+            line: warn.line || 1,
+            snippet: typeof warn === "string" ? warn : JSON.stringify(warn),
+            description: "Logical issue detected by AI",
+            fix: "Review logic",
+            file: "code"
+          });
+        });
+      }
+
+      r.issues = [...aiIssues, ...r.issues.filter((iss: any) => iss.severity === "info")];
+      r.critical = aiIssues.filter((iss: any) => iss.severity === "critical").length;
+      r.warnings = aiIssues.filter((iss: any) => iss.severity === "warning").length;
+      r.summary = `TC: ${parsed.timeComplexity || 'N/A'}, SC: ${parsed.spaceComplexity || 'N/A'}. ${parsed.explanation || ""}`;
+
+      r.scores.security = Math.max(0, 10 - r.critical * 2.5 - r.warnings * 1);
+      r.scores.maintainability = Math.max(0, 10 - r.critical * 2 - r.warnings * 0.5);
+
       setResults(r);
       if (settings.saveHistory) saveHistory(code, language, r);
       setAnalyzing(false);
       setAStep("");
       showToast(`Analysis complete: ${r.critical} critical, ${r.warnings} warnings`, "success");
-    }, steps.length * 650 + 200);
+
+    } catch (e: any) {
+      clearInterval(iv);
+      setAnalyzing(false);
+      setAStep("");
+      showToast(`AI Analysis failed: ${e.message || e.toString()}`, "error");
+    }
   }, [analyzing, code, language, settings.saveHistory]);
 
   const handleFix = async () => {
