@@ -22,9 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-backend/.env
-backend/.env
-<<<<<<< HEAD
-=======
+
+# Environment variables
 .env
->>>>>>> b198707 (update project)
+.env.local
+.env.*.local
+backend/.env

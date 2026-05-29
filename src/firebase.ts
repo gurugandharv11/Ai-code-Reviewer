@@ -7,13 +7,13 @@ import { getAnalytics } from "firebase/analytics";
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyCulPnzUg86Szlcb85HIJUnkOX0Q3N1-zw",
-  authDomain: "guruai-reviewer.firebaseapp.com",
-  projectId: "guruai-reviewer",
-  storageBucket: "guruai-reviewer.firebasestorage.app",
-  messagingSenderId: "709695803360",
-  appId: "1:709695803360:web:7e48d87dc0797dd37ba585",
-  measurementId: "G-WQN485M803"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "guruai-reviewer.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "guruai-reviewer",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "guruai-reviewer.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "709695803360",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:709695803360:web:7e48d87dc0797dd37ba585",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-WQN485M803"
 };
 
 // Initialize Firebase

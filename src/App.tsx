@@ -16,7 +16,7 @@ import emailjs from "@emailjs/browser";
 // FIREBASE
 // ─────────────────────────────────────────────────────────────────
 const firebaseApp = initializeApp({
-  apiKey: "AIzaSyBJaDzd1YljsMb5jarGA73-Hsjbel58O6o",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
   authDomain: "guruai-reviewer.firebaseapp.com",
   projectId: "guruai-reviewer",
   storageBucket: "guruai-reviewer.firebasestorage.app",
@@ -310,24 +310,16 @@ function runSecurityScan(code: string) {
 // AI HELPERS
 // ─────────────────────────────────────────────────────────────────
 async function callAI(prompt: string): Promise<string> {
-<<<<<<< HEAD
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
-    headers: {
+    headers: { 
       "Content-Type": "application/json",
-      "anthropic-dangerous-direct-browser-access": "true",
-      "x-api-key": "",
-      "anthropic-version": "2023-06-01",
+      "Authorization": `Bearer ${import.meta.env.VITE_OPENROUTER_API_KEY}`,
+      "HTTP-Referer": window.location.origin,
+      "X-Title": "Guru AI Code Reviewer"
     },
     body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-=======
-  const response = await fetch("http://localhost:5000/api/ai", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
       model: "meta-llama/llama-3.3-70b-instruct",
->>>>>>> b198707 (update project)
       max_tokens: 1000,
       messages: [{ role: "user", content: prompt }],
     }),
@@ -339,23 +331,8 @@ async function callAI(prompt: string): Promise<string> {
   }
 
   const data = await response.json();
-  const text = data.content?.[0]?.text;
+  const text = data.choices?.[0]?.message?.content || data.content?.[0]?.text;
   if (!text) throw new Error("Empty response from AI");
-<<<<<<< HEAD
-  return tex
-}
-const aiExplain = (issue: any) =>
-  callAI(`You are Guru AI, a senior code security expert.\n\nIssue: ${issue.title} (${issue.severity})\nLine: ${issue.line}\nSnippet: ${issue.snippet}\nFix: ${issue.fix}\n\nExplain: 1) Why it's dangerous  2) Real attack scenario  3) Fixed code example  4) Best practice. Be concise.`);
-
-const aiFixCode = (code: string, issues: any[]) =>
-  callAI(`Fix these issues in the code:\n${issues.slice(0, 5).map(i => `Line ${i.line}: ${i.title} — ${i.fix}`).join("\n")}\n\nCode:\n\`\`\`\n${code.slice(0, 2000)}\n\`\`\`\n\nReturn ONLY the fixed code with brief inline comments. No explanation outside code.`);
-
-const aiOptimize = (code: string, lang: string) =>
-  callAI(`Optimize this ${lang} code for performance and best practices.\n\`\`\`${lang}\n${code.slice(0, 2000)}\n\`\`\`\nReturn ONLY optimized code with brief inline comments.`);
-
-const aiChat = (msg: string, code: string, history: any[]) =>
-  callAI(`You are Guru AI, expert code assistant.\n${code ? `Code:\n\`\`\`\n${code.slice(0, 800)}\n\`\`\`` : ""}\n${history.slice(-4).map(h => `${h.role}: ${h.content}`).join("\n")}\n\nUser: ${msg}\n\nAnswer concisely with code examples where helpful.`);
-=======
   return text;
 }
 const aiExplain = (issue: any) =>
@@ -450,7 +427,6 @@ ${history.slice(-4).map(h => `**${h.role === "user" ? "User" : "Guru AI"}:** ${h
 **User:** ${msg}
 
 **Guru AI:**`);
->>>>>>> b198707 (update project)
 // ─────────────────────────────────────────────────────────────────
 // LANGUAGE DETECTION
 // ─────────────────────────────────────────────────────────────────
@@ -2087,8 +2063,4 @@ ${code.slice(0, 3000)}
       </div>
     </div>
   );
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> b198707 (update project)
