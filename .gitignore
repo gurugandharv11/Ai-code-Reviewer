@@ -24,3 +24,7 @@ dist-ssr
 *.sw?
 backend/.env
 backend/.env
+<<<<<<< HEAD
+=======
+.env
+>>>>>>> b198707 (update project)
