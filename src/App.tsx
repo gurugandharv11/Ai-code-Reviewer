@@ -8,23 +8,37 @@ import {
   LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
-import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import emailjs from "@emailjs/browser";
+import { initializeApp, getApps } from "firebase/app";
+import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 
 // ─────────────────────────────────────────────────────────────────
-// FIREBASE
+// FIREBASE — Safe init (no crash if API key is missing)
 // ─────────────────────────────────────────────────────────────────
-const firebaseApp = initializeApp({
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
-  authDomain: "guruai-reviewer.firebaseapp.com",
-  projectId: "guruai-reviewer",
-  storageBucket: "guruai-reviewer.firebasestorage.app",
-  messagingSenderId: "709695803360",
-  appId: "1:709695803360:web:7e48d87dc0797dd37ba585",
-});
-const fbAuth = getAuth(firebaseApp);
-const fbProvider = new GoogleAuthProvider();
+const FIREBASE_API_KEY = import.meta.env.VITE_FIREBASE_API_KEY || "";
+const FIREBASE_ENABLED = FIREBASE_API_KEY.length > 10;
+
+let fbAuth: any = null;
+let fbProvider: any = null;
+
+if (FIREBASE_ENABLED) {
+  try {
+    const firebaseApp = getApps().length === 0
+      ? initializeApp({
+          apiKey: FIREBASE_API_KEY,
+          authDomain: "guruai-reviewer.firebaseapp.com",
+          projectId: "guruai-reviewer",
+          storageBucket: "guruai-reviewer.firebasestorage.app",
+          messagingSenderId: "709695803360",
+          appId: "1:709695803360:web:7e48d87dc0797dd37ba585",
+        })
+      : getApps()[0];
+    fbAuth = getAuth(firebaseApp);
+    fbProvider = new GoogleAuthProvider();
+  } catch (e) {
+    console.warn("Firebase init skipped:", e);
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────
 // THEMES
@@ -310,29 +324,34 @@ function runSecurityScan(code: string) {
 // AI HELPERS
 // ─────────────────────────────────────────────────────────────────
 async function callAI(prompt: string): Promise<string> {
-  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+  const GROQ_KEY = import.meta.env.VITE_GROQ_API_KEY || "";
+
+  if (!GROQ_KEY) {
+    throw new Error("Missing API key. Add VITE_GROQ_API_KEY=your_key to .env file and restart dev server.");
+  }
+
+  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
-    headers: { 
+    headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${import.meta.env.VITE_OPENROUTER_API_KEY}`,
-      "HTTP-Referer": window.location.origin,
-      "X-Title": "Guru AI Code Reviewer"
+      "Authorization": `Bearer ${GROQ_KEY}`,
     },
     body: JSON.stringify({
-      model: "meta-llama/llama-3.3-70b-instruct",
-      max_tokens: 1000,
+      model: "llama-3.3-70b-versatile",
+      max_tokens: 1500,
+      temperature: 0.3,
       messages: [{ role: "user", content: prompt }],
     }),
   });
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error((err as any)?.error?.message || `HTTP ${response.status}`);
+    throw new Error((err as any)?.error?.message || `Groq HTTP ${response.status}`);
   }
 
   const data = await response.json();
-  const text = data.choices?.[0]?.message?.content || data.content?.[0]?.text;
-  if (!text) throw new Error("Empty response from AI");
+  const text = data?.choices?.[0]?.message?.content;
+  if (!text) throw new Error("Empty response from Groq — try again.");
   return text;
 }
 const aiExplain = (issue: any) =>
@@ -737,8 +756,12 @@ function LoginScreen({ onLogin, t }: any) {
 
   const validate = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
-  // FIX: Real Google Auth with proper error messages
+  // Google Auth — only runs if Firebase is configured
   const googleLogin = async () => {
+    if (!FIREBASE_ENABLED || !fbAuth || !fbProvider) {
+      setError("Google login not configured. Please use Demo Login or Email OTP below.");
+      return;
+    }
     setLoading(true);
     setError("");
     setGoogleStatus("waiting");
@@ -759,7 +782,6 @@ function LoginScreen({ onLogin, t }: any) {
       } else if (code === "auth/cancelled-popup-request" || code === "auth/popup-closed-by-user") {
         setError("Login cancelled. Click the button to try again.");
       } else if (code === "auth/unauthorized-domain") {
-        // Domain not whitelisted in Firebase — offer demo mode
         setError("Google login unavailable in this environment. Please use Email OTP or Demo login below.");
       } else {
         setError(`Google login failed: ${code || "Unknown error"}. Try Email OTP instead.`);
