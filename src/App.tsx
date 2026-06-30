@@ -9,36 +9,12 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
 import emailjs from "@emailjs/browser";
-import { initializeApp, getApps } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { signInWithPopup, onAuthStateChanged, signOut } from "firebase/auth";
+import { auth as fbAuth, googleProvider as fbProvider } from "./firebase";
 
-// ─────────────────────────────────────────────────────────────────
-// FIREBASE — Safe init (no crash if API key is missing)
-// ─────────────────────────────────────────────────────────────────
-const FIREBASE_API_KEY = import.meta.env.VITE_FIREBASE_API_KEY || "";
-const FIREBASE_ENABLED = FIREBASE_API_KEY.length > 10;
-
-let fbAuth: any = null;
-let fbProvider: any = null;
-
-if (FIREBASE_ENABLED) {
-  try {
-    const firebaseApp = getApps().length === 0
-      ? initializeApp({
-          apiKey: FIREBASE_API_KEY,
-          authDomain: "guruai-reviewer.firebaseapp.com",
-          projectId: "guruai-reviewer",
-          storageBucket: "guruai-reviewer.firebasestorage.app",
-          messagingSenderId: "709695803360",
-          appId: "1:709695803360:web:7e48d87dc0797dd37ba585",
-        })
-      : getApps()[0];
-    fbAuth = getAuth(firebaseApp);
-    fbProvider = new GoogleAuthProvider();
-  } catch (e) {
-    console.warn("Firebase init skipped:", e);
-  }
-}
+// Generated logo reference
+const GURU_LOGO_URL = "/@fs/C:/Users/gandharv/.gemini/antigravity/brain/df4dd913-78ce-41cc-b6be-a41794eeb028/guru_icon_1782841751825.png";
+const FIREBASE_ENABLED = true;
 
 // ─────────────────────────────────────────────────────────────────
 // THEMES
@@ -46,45 +22,35 @@ if (FIREBASE_ENABLED) {
 const THEMES: Record<string, any> = {
   dark: {
     name:"Dark", bg:"#060810", sidebar:"#08090f", card:"#0c0e18", card2:"#0f1120",
-    border:"#1a1d2e", border2:"#222535", text:"#e2e8f0", textDim:"#64748b",
-    textFaint:"#334155", textGhost:"#1e293b", input:"#0c0e18", headerBg:"#08090f",
-    blue:"#38bdf8", blueDark:"#0ea5e9", red:"#f87171", redBg:"rgba(239,68,68,0.1)",
-    redText:"#f87171", orange:"#fb923c", orangeBg:"rgba(251,146,60,0.1)",
-    green:"#4ade80", greenBg:"rgba(74,222,128,0.1)",
-    navHover:"rgba(56,189,248,0.06)", navActive:"rgba(56,189,248,0.1)",
+    border:"#334155", border2:"#475569", text:"#f8fafc", textDim:"#cbd5e1",
+    textFaint:"#94a3b8", textGhost:"#475569", input:"#0c0e18", headerBg:"#08090f",
+    blue:"#38bdf8", blueDark:"#0ea5e9", red:"#f87171", redBg:"rgba(239,68,68,0.15)",
+    redText:"#f87171", orange:"#fb923c", orangeBg:"rgba(251,146,60,0.15)",
+    green:"#4ade80", greenBg:"rgba(74,222,128,0.15)",
+    navHover:"rgba(56,189,248,0.06)", navActive:"rgba(56,189,248,0.12)",
     panelBg:"#060810", accent:"#38bdf8", termText:"#4ade80",
   },
-  cyberpunk: {
-    name:"Cyberpunk", bg:"#0a0010", sidebar:"#0d0015", card:"#110018", card2:"#140020",
-    border:"#2d0045", border2:"#3d0060", text:"#f0e6ff", textDim:"#9d7fc5",
-    textFaint:"#4a2d6b", textGhost:"#2d1545", input:"#110018", headerBg:"#0d0015",
-    blue:"#f700ff", blueDark:"#cc00dd", red:"#ff2060", redBg:"rgba(255,32,96,0.1)",
-    redText:"#ff2060", orange:"#ff8800", orangeBg:"rgba(255,136,0,0.1)",
-    green:"#00ff88", greenBg:"rgba(0,255,136,0.1)",
-    navHover:"rgba(247,0,255,0.06)", navActive:"rgba(247,0,255,0.12)",
-    panelBg:"#0a0010", accent:"#f700ff", termText:"#00ff88",
-  },
   light: {
-    name:"Light", bg:"#f1f5f9", sidebar:"#ffffff", card:"#ffffff", card2:"#f8fafc",
-    border:"#e2e8f0", border2:"#cbd5e1", text:"#0f172a", textDim:"#475569",
-    textFaint:"#94a3b8", textGhost:"#e2e8f0", input:"#f8fafc", headerBg:"#ffffff",
-    blue:"#2563eb", blueDark:"#1d4ed8", red:"#dc2626", redBg:"rgba(220,38,38,0.08)",
-    redText:"#dc2626", orange:"#ea580c", orangeBg:"rgba(234,88,12,0.08)",
-    green:"#16a34a", greenBg:"rgba(22,163,74,0.08)",
-    navHover:"rgba(37,99,235,0.06)", navActive:"rgba(37,99,235,0.1)",
-    panelBg:"#f1f5f9", accent:"#2563eb", termText:"#16a34a",
+    name:"Light", bg:"#f0f2f5", sidebar:"#ffffff", card:"#ffffff", card2:"#f8fafc",
+    border:"#d0d7de", border2:"#8c959f", text:"#0d1117", textDim:"#24292f",
+    textFaint:"#57606a", textGhost:"#b1bac4", input:"#ffffff", headerBg:"#ffffff",
+    blue:"#0969da", blueDark:"#0757ba", red:"#cf222e", redBg:"rgba(207,34,46,0.1)",
+    redText:"#cf222e", orange:"#bc4c00", orangeBg:"rgba(188,76,0,0.1)",
+    green:"#1a7f37", greenBg:"rgba(26,127,55,0.1)",
+    navHover:"rgba(9,105,218,0.06)", navActive:"rgba(9,105,218,0.1)",
+    panelBg:"#f0f2f5", accent:"#0969da", termText:"#1a7f37",
   },
 };
+
 
 // ─────────────────────────────────────────────────────────────────
 // GLOBAL CSS
 // ─────────────────────────────────────────────────────────────────
 const getCSS = (t: any) => `
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Syne:wght@700;800;900&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-html,body,#root{height:100%;background:${t.bg};}
-::-webkit-scrollbar{width:4px;height:4px;}
-::-webkit-scrollbar-thumb{background:${t.border2};border-radius:2px;}
+html,body,#root{height:100%;background:${t.bg};color:${t.text};font-family:'SF Pro Display', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;}
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-thumb{background:${t.border2};border-radius:4px;}
 ::-webkit-scrollbar-track{background:transparent;}
 @keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
 @keyframes slideLeft{from{opacity:0;transform:translateX(-18px);}to{opacity:1;transform:translateX(0);}}
@@ -97,25 +63,42 @@ html,body,#root{height:100%;background:${t.bg};}
 @keyframes fadeSlideIn{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
 .panel-enter{animation:fadeUp 0.28s cubic-bezier(0.22,1,0.36,1) both;}
 .slide-left{animation:slideLeft 0.22s cubic-bezier(0.22,1,0.36,1) both;}
-.nav-item{display:flex;align-items:center;gap:10px;padding:8px 16px;font-size:11.5px;border-left:2px solid transparent;cursor:pointer;user-select:none;font-family:'JetBrains Mono',monospace;transition:all 0.18s cubic-bezier(0.22,1,0.36,1);color:${t.textDim};}
+/* ── Sidebar nav ── */
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 16px;font-size:11.5px;border-left:2px solid transparent;cursor:pointer;user-select:none;font-family:'SF Pro Display', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;transition:all 0.18s cubic-bezier(0.22,1,0.36,1);color:${t.textDim};font-weight:500;}
 .nav-item:hover{color:${t.blue};background:${t.navHover};transform:translateX(3px);padding-left:20px;}
-.nav-item.active{color:${t.blue};border-left-color:${t.accent};background:${t.navActive};font-weight:600;}
-.tab-btn{padding:8px 13px;font-size:11px;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;user-select:none;font-family:'JetBrains Mono',monospace;transition:all 0.15s;color:${t.textFaint};}
+.nav-item.active{color:${t.blue};border-left-color:${t.accent};background:${t.navActive};font-weight:700;}
+/* ── Tab buttons ── */
+.tab-btn{padding:8px 13px;font-size:11px;border:none;border-bottom:2px solid transparent;background:transparent;cursor:pointer;white-space:nowrap;user-select:none;font-family:'SF Pro Display', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;transition:all 0.15s;color:${t.textFaint};font-weight:500;}
 .tab-btn:hover{color:${t.textDim};background:${t.navHover};}
-.tab-btn.active{color:${t.blue};border-bottom-color:${t.accent};}
-.btn-primary{background:linear-gradient(135deg,${t.blueDark},${t.blue});color:#fff;border:none;border-radius:8px;font-family:'JetBrains Mono',monospace;cursor:pointer;transition:all 0.18s;box-shadow:0 4px 20px ${t.accent}30;position:relative;overflow:hidden;}
-.btn-primary::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.12),transparent);transform:translateX(-100%);transition:transform 0.4s;}
+.tab-btn.active{color:${t.blue};border-bottom-color:${t.accent};font-weight:600;}
+/* ── Primary CTA button ── */
+.btn-primary{background:linear-gradient(135deg,${t.blueDark},${t.blue});color:#fff;border:none;border-radius:8px;font-family:'SF Pro Display', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;cursor:pointer;transition:all 0.18s;box-shadow:0 4px 20px ${t.accent}35;position:relative;overflow:hidden;font-weight:700;}
+.btn-primary::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.14),transparent);transform:translateX(-100%);transition:transform 0.4s;}
 .btn-primary:hover:not(:disabled)::after{transform:translateX(100%);}
-.btn-primary:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 28px ${t.accent}50;}
+.btn-primary:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 28px ${t.accent}55;}
 .btn-primary:active:not(:disabled){transform:translateY(0);}
 .btn-primary:disabled{opacity:0.45;cursor:not-allowed;}
+/* ── Ghost toolbar button ── */
+.toolbar-btn{display:inline-flex;align-items:center;gap:5px;height:34px;padding:0 13px;font-size:11.5px;font-weight:600;font-family:'SF Pro Display', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;background:transparent;border:1px solid ${t.border2};border-radius:7px;color:${t.textDim};cursor:pointer;transition:all 0.15s;white-space:nowrap;}
+.toolbar-btn:hover:not(:disabled){color:${t.text};border-color:${t.text}60;background:${t.navHover};transform:translateY(-1px);}
+.toolbar-btn:active:not(:disabled){transform:translateY(0);}
+.toolbar-btn.active{color:${t.blue};border-color:${t.blue}80;background:${t.navActive};}
+.toolbar-btn:disabled{opacity:0.4;cursor:not-allowed;}
+/* ── Language selector button ── */
+.lang-btn{display:inline-flex;align-items:center;gap:5px;height:34px;padding:0 13px;font-size:11.5px;font-weight:700;font-family:'SF Pro Display', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;background:${t.navActive};border:1px solid ${t.blue}60;border-radius:7px;color:${t.blue};cursor:pointer;transition:all 0.15s;}
+.lang-btn:hover{background:${t.navHover};border-color:${t.blue};}
+/* ── Cards ── */
 .card-hover{transition:transform 0.28s cubic-bezier(0.22,1,0.36,1),box-shadow 0.28s;}
-.card-hover:hover{transform:perspective(700px) rotateX(-1deg) rotateY(1deg) translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,0.25);}
+.card-hover:hover{transform:perspective(700px) rotateX(-1deg) rotateY(1deg) translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,0.2);}
 .issue-card{transition:all 0.2s;}
-.issue-card:hover{transform:translateX(6px);box-shadow:0 4px 20px rgba(0,0,0,0.25);}
+.issue-card:hover{transform:translateX(6px);box-shadow:0 4px 20px rgba(0,0,0,0.15);}
 .score-hover{transition:transform 0.25s cubic-bezier(0.22,1,0.36,1),box-shadow 0.25s;cursor:default;}
 .score-hover:hover{transform:translateY(-6px) scale(1.04);}
-@media(max-width:768px){.sidebar-desktop{display:none !important;}.mobile-only{display:flex !important;}.score-grid{grid-template-columns:1fr 1fr !important;}.chart-flex{flex-direction:column !important;}.complexity-grid{grid-template-columns:1fr !important;}}
+/* ── Textarea ── */
+textarea{color:${t.text} !important;}
+textarea::placeholder{color:${t.textFaint};font-family:'JetBrains Mono','SF Mono','Cascadia Code',Consolas,monospace;opacity:0.65;white-space:pre;}
+/* ── Responsive ── */
+@media(max-width:768px){.sidebar-desktop{display:none !important;}.mobile-only{display:flex !important;}.score-grid{grid-template-columns:1fr 1fr !important;}.chart-flex{flex-direction:column !important;}.complexity-grid{grid-template-columns:1fr !important;}.toolbar-compact{flex-wrap:wrap !important;}}
 @media(min-width:769px){.mobile-only{display:none !important;}}
 `;
 
@@ -552,13 +535,494 @@ function Toast({ msg, type, t }: any) {
   const bg  = type === "error" ? t.redBg : type === "success" ? t.greenBg : `${t.blue}10`;
   const col = type === "error" ? t.redText : type === "success" ? t.green : t.blue;
   return (
-    <div style={{ position: "fixed", bottom: 80, right: 20, zIndex: 9999, padding: "10px 18px", background: bg, border: `1px solid ${col}40`, borderRadius: 10, fontSize: 12, color: col, fontFamily: "'JetBrains Mono',monospace", boxShadow: "0 8px 24px rgba(0,0,0,0.3)", animation: "slideRight 0.25s both", maxWidth: 320 }}>
+    <div style={{ position: "fixed", bottom: 80, right: 20, zIndex: 9999, padding: "10px 18px", background: bg, border: `1px solid ${col}40`, borderRadius: 10, fontSize: 12, color: col, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", boxShadow: "0 8px 24px rgba(0,0,0,0.3)", animation: "slideRight 0.25s both", maxWidth: 320 }}>
       {msg}
     </div>
   );
 }
 
+// ─────────────────────────────────────────────────────────────────
+// GITHUB STYLE CODE REVIEW & DIFF SYSTEM
+// ─────────────────────────────────────────────────────────────────
+function getIssueIcon(issue: any) {
+  if (issue.fixed || issue.isFixed) return "✅";
+  const titleLower = (issue.title || "").toLowerCase();
+  
+  if (titleLower.includes("security") || titleLower.includes("sql") || titleLower.includes("xss") || titleLower.includes("secret") || titleLower.includes("key") || titleLower.includes("credential") || titleLower.includes("eval") || titleLower.includes("innerhtml") || titleLower.includes("token")) {
+    return "🛡️";
+  }
+  if (titleLower.includes("performance") || titleLower.includes("complexity") || titleLower.includes("loop") || titleLower.includes("o(n") || titleLower.includes("random") || titleLower.includes("optimize")) {
+    return "⚡";
+  }
+  if (issue.severity === "critical" || issue.severity === "error") {
+    return "🔴";
+  }
+  if (issue.severity === "warning") {
+    return "⚠️";
+  }
+  return "ℹ️";
+}
+
+function getInlineCodeFix(ruleTitle: string, lineSnippet: string): string {
+  const trimmed = lineSnippet.trim();
+  if (ruleTitle.toLowerCase().includes("eval(")) {
+    const match = trimmed.match(/eval\(([^)]+)\)/);
+    if (match) {
+      return trimmed.replace(`eval(${match[1]})`, `JSON.parse(${match[1]})`);
+    }
+    return "JSON.parse(data)";
+  }
+  if (ruleTitle.toLowerCase().includes("innerhtml")) {
+    return trimmed.replace(/\.innerHTML\s*=/, ".textContent =");
+  }
+  if (ruleTitle.toLowerCase().includes("document.write")) {
+    return "// Use modern DOM APIs like document.createElement() instead";
+  }
+  if (ruleTitle.toLowerCase().includes("sql injection")) {
+    return "// Use parameterized query, e.g., db.query('SELECT * FROM users WHERE id = ?', [userId])";
+  }
+  if (ruleTitle.toLowerCase().includes("hardcoded secret") || ruleTitle.toLowerCase().includes("api key")) {
+    return trimmed.replace(/=\s*['"][^'"]+['"]/, "= process.env.API_KEY");
+  }
+  if (ruleTitle.toLowerCase().includes("random")) {
+    return trimmed.replace(/Math\.random\(\)/g, "crypto.getRandomValues(new Uint32Array(1))[0]");
+  }
+  if (ruleTitle.toLowerCase().includes("http url")) {
+    return trimmed.replace(/http:\/\//g, "https://");
+  }
+  if (ruleTitle.toLowerCase().includes("console.log")) {
+    return "// Remove console.log in production";
+  }
+  if (ruleTitle.toLowerCase().includes("var")) {
+    return trimmed.replace(/\bvar\s+/g, "const ");
+  }
+  return "";
+}
+
+function computeLineDiff(oldStr: string, newStr: string) {
+  const oldLines = (oldStr || "").split("\n");
+  const newLines = (newStr || "").split("\n");
+  const dp: number[][] = Array(oldLines.length + 1).fill(null).map(() => Array(newLines.length + 1).fill(0));
+  
+  for (let i = 1; i <= oldLines.length; i++) {
+    for (let j = 1; j <= newLines.length; j++) {
+      if (oldLines[i - 1] === newLines[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1] + 1;
+      } else {
+        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+      }
+    }
+  }
+  
+  const diff: { type: "added" | "removed" | "unchanged"; text: string; oldLineNum?: number; newLineNum?: number }[] = [];
+  let i = oldLines.length;
+  let j = newLines.length;
+  
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && oldLines[i - 1] === newLines[j - 1]) {
+      diff.push({ type: "unchanged", text: oldLines[i - 1], oldLineNum: i, newLineNum: j });
+      i--;
+      j--;
+    } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+      diff.push({ type: "added", text: newLines[j - 1], newLineNum: j });
+      j--;
+    } else {
+      diff.push({ type: "removed", text: oldLines[i - 1], oldLineNum: i });
+      i--;
+    }
+  }
+  
+  return diff.reverse();
+}
+
+function CodeReviewViewer({ code, results, t }: any) {
+  const lines = code.split("\n");
+  const issuesByLine = (results?.issues || []).reduce((acc: any, issue: any) => {
+    const lineNum = issue.line || 1;
+    if (!acc[lineNum]) acc[lineNum] = [];
+    acc[lineNum].push(issue);
+    return acc;
+  }, {});
+
+  return (
+    <div style={{
+      display: "flex",
+      flexDirection: "column",
+      fontFamily: "'JetBrains Mono', 'Cascadia Code', 'SF Mono', monospace",
+      fontSize: 13,
+      lineHeight: "22px",
+      background: t.card,
+      borderRadius: 12,
+      border: `1px solid ${t.border}`,
+      overflow: "hidden",
+    }}>
+      {lines.map((lineText: string, index: number) => {
+        const lineNum = index + 1;
+        const lineIssues = issuesByLine[lineNum] || [];
+        const hasError = lineIssues.some((i: any) => i.severity === "critical");
+        const hasWarning = lineIssues.some((i: any) => i.severity === "warning");
+        
+        let bg = "transparent";
+        let borderLeft = "3px solid transparent";
+        if (hasError) {
+          bg = t.redBg || "rgba(239, 68, 68, 0.15)";
+          borderLeft = `3px solid ${t.red}`;
+        } else if (hasWarning) {
+          bg = t.orangeBg || "rgba(251, 146, 60, 0.15)";
+          borderLeft = `3px solid ${t.orange}`;
+        }
+
+        return (
+          <div key={index} style={{ display: "flex", flexDirection: "column" }}>
+            <div style={{
+              display: "flex",
+              background: bg,
+              borderLeft: borderLeft,
+              padding: "0 16px",
+              alignItems: "stretch",
+            }}>
+              <div style={{
+                width: 44,
+                color: hasError ? t.red : hasWarning ? t.orange : t.textFaint,
+                textAlign: "right",
+                paddingRight: 12,
+                userSelect: "none",
+                borderRight: `1px solid ${t.border}`,
+                opacity: 0.8,
+                fontWeight: (hasError || hasWarning) ? 700 : 400,
+              }}>
+                {lineNum}
+              </div>
+              <pre style={{
+                margin: 0,
+                paddingLeft: 12,
+                whiteSpace: "pre-wrap",
+                color: t.text,
+                flex: 1,
+              }}>{lineText || " "}</pre>
+            </div>
+
+            {lineIssues.map((issue: any, issueIdx: number) => {
+              const icon = getIssueIcon(issue);
+              const issueColor = issue.severity === "critical" ? t.red : issue.severity === "warning" ? t.orange : t.blue;
+              const inlineFix = getInlineCodeFix(issue.title, lineText);
+              
+              return (
+                <div key={issueIdx} style={{
+                  margin: "6px 16px 10px 56px",
+                  background: t.card2,
+                  border: `1px solid ${issueColor}50`,
+                  borderRadius: 10,
+                  padding: "12px 16px",
+                  fontSize: 12,
+                  boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700, color: t.text, marginBottom: 6 }}>
+                    <span style={{ fontSize: 14 }}>{icon}</span>
+                    <span>{issue.title}</span>
+                  </div>
+                  <div style={{ color: t.textDim, marginBottom: 8, lineHeight: 1.5 }}>{issue.description}</div>
+                  
+                  {inlineFix && (
+                    <div style={{ marginTop: 8 }}>
+                      <div style={{ fontSize: 10, color: t.textFaint, marginBottom: 4, fontWeight: 600 }}>Suggested fix:</div>
+                      <div style={{
+                        color: t.green,
+                        background: t.greenBg,
+                        border: `1px solid ${t.green}30`,
+                        borderRadius: 6,
+                        padding: "8px 12px",
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontSize: 11,
+                        whiteSpace: "pre-wrap",
+                      }}>
+                        ✓ {inlineFix}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function DiffViewer({ oldCode, newCode, t }: any) {
+  const diffs = computeLineDiff(oldCode, newCode);
+  
+  return (
+    <div style={{
+      display: "flex",
+      flexDirection: "column",
+      fontFamily: "'JetBrains Mono', 'Cascadia Code', 'SF Mono', monospace",
+      fontSize: 12,
+      lineHeight: "20px",
+      background: t.card,
+      borderRadius: 12,
+      border: `1px solid ${t.border}`,
+      overflow: "hidden",
+    }}>
+      <div style={{
+        padding: "10px 16px",
+        background: t.headerBg,
+        borderBottom: `1px solid ${t.border}`,
+        fontSize: 11,
+        color: t.textDim,
+        fontWeight: 700,
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      }}>
+        🛠️ Pull Request Style Diff (Original vs. AI Fixed)
+      </div>
+      <div style={{ overflowX: "auto", maxHeight: 550 }}>
+        {diffs.map((line, idx) => {
+          let bg = "transparent";
+          let color = t.text;
+          let prefix = " ";
+          
+          if (line.type === "added") {
+            bg = t.greenBg || "rgba(74, 222, 128, 0.15)";
+            color = t.green;
+            prefix = "+";
+          } else if (line.type === "removed") {
+            bg = t.redBg || "rgba(239, 68, 68, 0.15)";
+            color = t.red;
+            prefix = "-";
+          }
+          
+          return (
+            <div key={idx} style={{
+              display: "flex",
+              background: bg,
+              padding: "0 16px",
+              alignItems: "stretch",
+            }}>
+              <div style={{
+                width: 68,
+                color: line.type === "added" ? t.green : line.type === "removed" ? t.red : t.textGhost,
+                textAlign: "right",
+                paddingRight: 12,
+                userSelect: "none",
+                borderRight: `1px solid ${t.border}`,
+                opacity: 0.6,
+                fontSize: 10,
+              }}>
+                {line.type === "added" ? `  ${line.newLineNum}` : line.type === "removed" ? `${line.oldLineNum}  ` : `${line.oldLineNum} ${line.newLineNum}`}
+              </div>
+              
+              <div style={{
+                paddingLeft: 12,
+                whiteSpace: "pre-wrap",
+                color: color,
+                flex: 1,
+              }}>
+                <span style={{ userSelect: "none", opacity: 0.5, marginRight: 8 }}>{prefix}</span>
+                {line.text}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// EDGE CASE ENGINE — deterministic, no AI required
+// ─────────────────────────────────────────────────────────────────
+function generateEdgeCases(code: string, language: string): any[] {
+  const c = code.toLowerCase();
+  const cases: any[] = [];
+  const has = (...terms: string[]) => terms.some(t => c.includes(t));
+  const push = (title: string, input: string, expected: string, category: string, extra = "") =>
+    cases.push({ title, input, expected, category, extra });
+
+  if (has("array", "arr", "list", "[]", "push", "pop", "length", "vector", "arraylist")) {
+    push("Empty Array", "[]", "Handle empty input gracefully — no crash, return 0 / null / empty", "Array");
+    push("Single Element", "[42]", "Result for exactly one element — edge of iteration", "Array");
+    push("All Identical Elements", "[7, 7, 7, 7]", "Duplicates — check dedup logic and comparison operators", "Array");
+    push("Very Large Array (10^6)", "Array of 1,000,000 integers", "Performance test — must complete within time limit", "Array", "locked");
+    push("Negative Numbers", "[-5, -1, -100, 0]", "Negative values — check abs comparisons and min/max logic", "Array", "locked");
+    push("Already Sorted Array", "[1, 2, 3, 4, 5]", "Best-case for sort algorithms — O(n) for bubble sort", "Array", "locked");
+    push("Reverse Sorted Array", "[5, 4, 3, 2, 1]", "Worst-case for many sort algorithms — O(n^2) for bubble", "Array", "locked");
+  }
+
+  if (has("string", "str", "char", "substring", "indexof", "split", "trim", "regex", "replace")) {
+    push("Empty String", '""', "Must not crash — check null/empty guards at entry", "String");
+    push("Single Character", '"a"', "Minimum non-empty input — boundary of loops and slices", "String");
+    push("Whitespace Only", '"   "', "Trim logic — does the function treat whitespace as empty?", "String", "locked");
+    push("Very Long String (1M chars)", '"a".repeat(1_000_000)', "Performance — no O(n^2) string concat in a loop", "String", "locked");
+    push("Special Characters", '"!@#$%^&*()"', "Escaping, regex meta-chars, encoding issues", "String", "locked");
+    push("Unicode / Emoji", '"hello world"', "Multi-byte chars — check length vs codepoint counting", "String", "locked");
+  }
+
+  if (has("number", "int", "float", "double", "math.", "num", "count", "sum", "max", "min", "parseint", "parsefloat")) {
+    push("Zero Input", "0", "Zero — division-by-zero risk, neutral element for sum/product", "Number");
+    push("Negative Input", "-1 or -999", "Sign handling — abs(), mod behaviour differs by language", "Number");
+    push("MAX_INT (2^31-1)", "2147483647", "Overflow — addition may wrap or throw on overflow", "Number", "locked");
+    push("MIN_INT (-2^31)", "-2147483648", "Underflow — negation of MIN_INT overflows in most languages", "Number", "locked");
+    push("Floating Point Precision", "0.1 + 0.2", "IEEE 754 precision — result is 0.30000000000000004", "Number", "locked");
+  }
+
+  if (has("recursion", "recursive", "factorial", "fibonacci", "fib", "depth", "dfs", "call stack")) {
+    push("Base Case n=0", "n = 0", "Recursion terminates correctly at base case", "Recursion");
+    push("Base Case n=1", "n = 1", "Second base case — common in Fibonacci/factorial", "Recursion");
+    push("Deep Recursion (n=10000)", "n = 10000", "Stack overflow risk — check tail recursion or iteration", "Recursion", "locked");
+    push("Negative Input", "n = -1", "Infinite recursion if base case not guarded for negatives", "Recursion", "locked");
+  }
+
+  if (has("tree", "node", "root", "left", "right", "bst", "binary", "inorder", "preorder", "postorder")) {
+    push("Empty Tree (null root)", "root = null", "Must return early without crash on null root", "Tree");
+    push("Single Node", "root = Node(5)", "Tree of depth 0 — no children, just root", "Tree");
+    push("Left-Skewed Tree", "1->2->3->4->5 (all left children)", "Degenerates to a linked list — O(n) depth", "Tree", "locked");
+    push("Right-Skewed Tree", "1->2->3->4->5 (all right children)", "Worst case for recursion depth", "Tree", "locked");
+    push("Perfect Binary Tree (height 20)", "2^20 - 1 nodes", "Memory and time stress test for recursive traversal", "Tree", "locked");
+  }
+
+  if (has("graph", "edge", "vertex", "adjacency", "bfs", "dfs", "visited", "neighbor", "queue", "path")) {
+    push("Empty Graph (0 nodes)", "V=0, E=0", "Must not crash on empty adjacency list", "Graph");
+    push("Disconnected Graph", "Two separate components", "BFS/DFS must not assume full connectivity", "Graph");
+    push("Graph with Cycle", "A->B->C->A", "Cycle detection — mark visited or infinite loop", "Graph", "locked");
+    push("Complete Dense Graph", "1000 nodes, all pairs connected", "O(V^2) edge traversal — performance stress test", "Graph", "locked");
+    push("Self-Loop Node", "A->A edge present", "DFS/BFS visited check must handle self-loops", "Graph", "locked");
+  }
+
+  if (has("map", "hashmap", "dict", "object", "key", "value", "set", "entries", "hasownproperty")) {
+    push("Empty Map", "{}", "Lookup on empty map returns undefined — not an error", "HashMap");
+    push("Key Not Found", "map.get('missing')", "Must return null/undefined gracefully, not throw", "HashMap");
+    push("Null Key Lookup", "map.set(null, 1)", "Some languages allow null keys — others throw TypeError", "HashMap", "locked");
+  }
+
+  if (has("sort", "bubble", "merge", "quicksort", "heapsort", "compare", "comparator")) {
+    push("Empty Array", "[]", "Sort of empty array must return []", "Sorting");
+    push("Two Elements (reversed)", "[2, 1]", "Minimum swap case — validate comparator direction", "Sorting");
+    push("All Same Elements", "[3, 3, 3, 3]", "Stability and no-op check for equal elements", "Sorting", "locked");
+    push("Negative + Positive Mix", "[-3, 0, 5, -1, 4]", "Mixed sign array — sort order correctness", "Sorting", "locked");
+  }
+
+  if (cases.length === 0) {
+    push("Null Input", "null or undefined", "Ensure null guard at entry point before processing", "General");
+    push("Empty Input", "empty string, array or object", "Most common edge case — handle all empty variants", "General");
+    push("Maximum Boundary", "INT_MAX or very large input", "Overflow and performance at scale", "General", "locked");
+    push("Minimum Boundary", "INT_MIN or -Infinity", "Underflow and sign handling edge", "General", "locked");
+    push("Concurrent Calls", "Two invocations simultaneously", "Thread / async safety check", "General", "locked");
+  }
+
+  return cases;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// EDGE CASES PANEL COMPONENT
+// ─────────────────────────────────────────────────────────────────
+const FREE_LIMIT = 2;
+
+function EdgeCasesPanel({ edgeCases, t }: { edgeCases: any[]; t: any }) {
+  if (!edgeCases || edgeCases.length === 0) return null;
+
+  const freeCases   = edgeCases.filter((ec: any) => !ec.extra);
+  const lockedCases = edgeCases.filter((ec: any) => ec.extra);
+  const visibleFree = freeCases.slice(0, FREE_LIMIT);
+  const cats        = Array.from(new Set(visibleFree.map((ec: any) => ec.category)));
+
+  const CAT_COLOR: Record<string, string> = {
+    Array:    t.blue, String: t.green, Number: t.orange,
+    Tree:     "#a78bfa", Graph: "#f472b6", HashMap: t.blue,
+    Sorting:  t.orange, Recursion: t.green, General: t.textFaint,
+  };
+  const cc = (cat: string) => CAT_COLOR[cat] || t.blue;
+
+  return (
+    <div style={{ borderRadius: 14, border: `1px solid ${t.border}`, background: t.card, overflow: "hidden", animation: "fadeUp 0.35s cubic-bezier(0.22,1,0.36,1)" }}>
+      {/* Header */}
+      <div style={{ padding: "14px 18px", borderBottom: `1px solid ${t.border}`, display: "flex", alignItems: "center", gap: 10, background: t.card2 }}>
+        <span style={{ fontSize: 16 }}>🧪</span>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: t.text, fontFamily: "'SF Pro Display', -apple-system, sans-serif" }}>Generated Edge Cases</div>
+          <div style={{ fontSize: 10, color: t.textFaint, marginTop: 1 }}>Auto-detected from your code structure</div>
+        </div>
+        <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 20, background: `${t.blue}15`, color: t.blue, border: `1px solid ${t.blue}30` }}>
+          {FREE_LIMIT}/{edgeCases.length} Free
+        </span>
+      </div>
+
+      {/* Category chips */}
+      {cats.length > 0 && (
+        <div style={{ padding: "8px 18px", display: "flex", gap: 6, flexWrap: "wrap", borderBottom: `1px solid ${t.border}` }}>
+          {cats.map((cat: string) => (
+            <span key={cat} style={{ fontSize: 9, fontWeight: 700, padding: "2px 9px", borderRadius: 20, background: `${cc(cat)}18`, color: cc(cat), border: `1px solid ${cc(cat)}30` }}>
+              {cat}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Free cases */}
+      <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
+        {visibleFree.map((ec: any, i: number) => (
+          <div key={i} style={{ background: t.card2, border: `1px solid ${cc(ec.category)}30`, borderLeft: `3px solid ${cc(ec.category)}`, borderRadius: 10, padding: "12px 14px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 4, background: `${cc(ec.category)}15`, color: cc(ec.category) }}>{ec.category}</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: t.text }}>✓ {ec.title}</span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+              <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                <span style={{ fontSize: 9, fontWeight: 700, color: t.textFaint, minWidth: 52, paddingTop: 2 }}>INPUT</span>
+                <code style={{ fontSize: 11, background: t.panelBg, color: cc(ec.category), padding: "3px 8px", borderRadius: 5, fontFamily: "'JetBrains Mono', monospace", flex: 1 }}>{ec.input}</code>
+              </div>
+              <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                <span style={{ fontSize: 9, fontWeight: 700, color: t.textFaint, minWidth: 52, paddingTop: 2 }}>EXPECT</span>
+                <span style={{ fontSize: 11, color: t.textDim, flex: 1, lineHeight: 1.5 }}>{ec.expected}</span>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {/* Premium upsell */}
+        {lockedCases.length > 0 && (
+          <div style={{ borderRadius: 12, border: `1px dashed ${t.border2}`, padding: "18px 16px", background: t.card2 }}>
+            {/* Locked previews */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
+              {lockedCases.slice(0, 4).map((ec: any, i: number) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: t.card, borderRadius: 8, border: `1px solid ${t.border}`, opacity: 0.65 }}>
+                  <span style={{ fontSize: 11 }}>🔒</span>
+                  <span style={{ fontSize: 11, color: t.textFaint, fontStyle: "italic" }}>{ec.title}</span>
+                  <span style={{ marginLeft: "auto", fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 4, background: `${cc(ec.category)}12`, color: cc(ec.category) }}>{ec.category}</span>
+                </div>
+              ))}
+              {lockedCases.length > 4 && (
+                <div style={{ fontSize: 10, color: t.textFaint, textAlign: "center" }}>
+                  + {lockedCases.length - 4} more premium edge cases...
+                </div>
+              )}
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: t.text, marginBottom: 8 }}>🚀 Unlock with Premium</div>
+              {["Unlimited Edge Cases", "Stress Tests (10^6 inputs)", "Boundary Value Analysis", "Hidden Test Cases", "Competitive Programming Tests", "Randomized Fuzz Testing"].map(f => (
+                <div key={f} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: t.textDim, marginBottom: 4 }}>
+                  <span style={{ color: t.blue, fontSize: 10 }}>✦</span> {f}
+                </div>
+              ))}
+            </div>
+
+            <button
+              style={{ width: "100%", padding: "11px 0", background: `linear-gradient(135deg, ${t.blueDark}, ${t.blue})`, color: "#fff", border: "none", borderRadius: 10, fontSize: 12, fontWeight: 800, cursor: "pointer", letterSpacing: "0.03em", boxShadow: `0 4px 20px ${t.accent}40`, fontFamily: "'SF Pro Display', -apple-system, sans-serif", transition: "all 0.18s" }}
+              onMouseEnter={e => { (e.currentTarget as any).style.transform = "translateY(-2px)"; }}
+              onMouseLeave={e => { (e.currentTarget as any).style.transform = "none"; }}
+            >
+              ⚡ Upgrade to Premium
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function getSevStyle(sev: string, t: any) {
+
   return ({
     critical: { bg: t.redBg, text: t.redText, label: "Critical" },
     warning:  { bg: t.orangeBg, text: t.orange, label: "Warning" },
@@ -597,7 +1061,7 @@ const QUAL_TREND = [{ d:"Apr 7",s:4.0},{d:"Apr 10",s:4.1},{d:"Apr 13",s:4.3},{d:
 function ChartTip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{ background: "#0c0e18", border: "1px solid #1a1d2e", borderRadius: 8, padding: "6px 12px", fontSize: 11, fontFamily: "'JetBrains Mono',monospace" }}>
+    <div style={{ background: "#0c0e18", border: "1px solid #1a1d2e", borderRadius: 8, padding: "6px 12px", fontSize: 11, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
       <div style={{ color: "#64748b" }}>{label}</div>
       <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>{Number(payload[0].value).toFixed(1)}</div>
     </div>
@@ -608,8 +1072,8 @@ function ScoreCard({ label, value, color, t }: any) {
   const pct = Math.min(100, (parseFloat(value) / 10) * 100);
   return (
     <div className="score-hover" style={{ flex: 1, minWidth: 110, background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: "14px 16px" }}>
-      <div style={{ fontSize: 9, color: t.textFaint, textTransform: "uppercase" as const, letterSpacing: "0.8px", marginBottom: 8, fontFamily: "'JetBrains Mono',monospace" }}>{label}</div>
-      <div style={{ fontSize: 26, fontWeight: 900, color, lineHeight: 1, fontFamily: "'Syne',sans-serif" }}>{value}</div>
+      <div style={{ fontSize: 9, color: t.textFaint, textTransform: "uppercase" as const, letterSpacing: "0.8px", marginBottom: 8, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>{label}</div>
+      <div style={{ fontSize: 26, fontWeight: 900, color, lineHeight: 1, fontFamily: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>{value}</div>
       <div style={{ marginTop: 10, height: 4, background: t.border, borderRadius: 2 }}>
         <div style={{ height: 4, width: `${pct}%`, background: color, borderRadius: 2, boxShadow: `0 0 8px ${color}50`, transition: "width 1s cubic-bezier(0.22,1,0.36,1)" }} />
       </div>
@@ -637,9 +1101,8 @@ function ThreeBackground({ theme }: { theme: string }) {
     camera.position.z = 35;
 
     const COLS: any = {
-      dark:     { p1: 0x38bdf8, p2: 0x4ade80, p3: 0xa78bfa },
-      cyberpunk:{ p1: 0xf700ff, p2: 0x00ff88, p3: 0x00e5ff },
-      light:    { p1: 0x2563eb, p2: 0x7c3aed, p3: 0x0891b2 },
+      dark:     { p1: 0x38bdf8, p2: 0x4ade80, p3: 0x0ea5e9 },
+      light:    { p1: 0x2563eb, p2: 0x16a34a, p3: 0x0ea5e9 },
     };
     const c = COLS[theme] || COLS.dark;
     const N = 200;
@@ -727,12 +1190,12 @@ function ScanOverlay({ step, t }: { step: string; t: any }) {
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 24 }}>
       <div style={{ width: 64, height: 64, borderRadius: "50%", border: `3px solid ${t.blue}22`, borderTopColor: t.blue, animation: "spin 1s linear infinite" }} />
-      <div style={{ fontFamily: "'Syne',sans-serif", fontSize: 22, fontWeight: 900, color: t.blue }}>{step}</div>
+      <div style={{ fontFamily: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", fontSize: 22, fontWeight: 900, color: t.blue }}>{step}</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 280 }}>
         {steps.map(s => (
           <div key={s} style={{ display: "flex", alignItems: "center", gap: 10, opacity: s === step ? 1 : 0.3, transition: "opacity 0.3s" }}>
             <div style={{ width: 6, height: 6, borderRadius: "50%", background: s === step ? t.blue : t.border2, boxShadow: s === step ? `0 0 8px ${t.blue}` : "" }} />
-            <span style={{ fontSize: 11, color: s === step ? t.blue : t.textFaint, fontFamily: "'JetBrains Mono',monospace" }}>{s}</span>
+            <span style={{ fontSize: 11, color: s === step ? t.blue : t.textFaint, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>{s}</span>
           </div>
         ))}
       </div>
@@ -818,7 +1281,7 @@ function LoginScreen({ onLogin, t }: any) {
   const inp = (extra = {}) => ({
     width: "100%", background: t.input, border: `1px solid ${t.border}`,
     borderRadius: 10, padding: "12px 14px", color: t.text,
-    fontFamily: "'JetBrains Mono',monospace", fontSize: 13, outline: "none",
+    fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", fontSize: 13, outline: "none",
     transition: "border-color 0.18s", marginBottom: 10, ...extra,
   });
 
@@ -830,52 +1293,32 @@ function LoginScreen({ onLogin, t }: any) {
 
       <div style={{ animation: "float3d 7s ease-in-out infinite", position: "relative", zIndex: 1, width: "100%", maxWidth: 440, padding: "0 20px" }}>
         <div style={{ background: t.sidebar, border: `1px solid ${t.border2}`, borderRadius: 24, padding: "44px 40px", boxShadow: `0 48px 96px rgba(0,0,0,0.35),inset 0 1px 0 rgba(255,255,255,0.05)`, textAlign: "center" }}>
-          <div style={{ width: 62, height: 62, borderRadius: 16, background: `linear-gradient(135deg,${t.blueDark},${t.blue})`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", fontSize: 22, fontWeight: 900, color: "#fff", boxShadow: `0 8px 28px ${t.blue}55`, animation: "glow 2.5s infinite", fontFamily: "'Syne',sans-serif" }}>G</div>
-          <div style={{ fontFamily: "'Syne',sans-serif", fontSize: 30, fontWeight: 900, color: t.text, marginBottom: 4, letterSpacing: "-0.5px" }}>Guru AI</div>
-          <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 9, color: t.textFaint, marginBottom: 28, letterSpacing: "1px" }}>AI-POWERED CODE REVIEW PLATFORM</div>
+          <img src={GURU_LOGO_URL} alt="Guru AI" style={{ width: 80, height: 80, borderRadius: "50%", objectFit: "cover", margin: "0 auto 20px", display: "block", boxShadow: `0 8px 28px ${t.blue}55`, animation: "glow 2.5s infinite", border: `2px solid ${t.blue}40`, background: `linear-gradient(135deg,${t.blueDark}22,${t.blue}22)` }} />
+          <div style={{ fontFamily: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", fontSize: 30, fontWeight: 900, color: t.text, marginBottom: 4, letterSpacing: "-0.5px" }}>Guru AI</div>
+          <div style={{ fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", fontSize: 9, color: t.textFaint, marginBottom: 28, letterSpacing: "1px" }}>AI-POWERED CODE REVIEW PLATFORM</div>
           <div style={{ display: "flex", gap: 5, justifyContent: "center", marginBottom: 28, flexWrap: "wrap" }}>
-            {["Security Scan", "AST Analysis", "AI Fix", "Tech Debt"].map(f => (
-              <span key={f} style={{ fontSize: 9, padding: "3px 9px", background: t.navActive, border: `1px solid ${t.blue}30`, borderRadius: 20, color: t.blue, fontFamily: "'JetBrains Mono',monospace" }}>{f}</span>
+            {["Security Scan", "AST Analysis", "AI Fix"].map(f => (
+              <span key={f} style={{ fontSize: 9, padding: "3px 9px", background: t.navActive, border: `1px solid ${t.blue}30`, borderRadius: 20, color: t.blue, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>{f}</span>
             ))}
           </div>
 
           {error && (
-            <div style={{ marginBottom: 12, padding: "8px 14px", background: t.redBg, border: `1px solid ${t.redText}30`, borderRadius: 8, fontSize: 11, color: t.redText, fontFamily: "'JetBrains Mono',monospace", textAlign: "left", lineHeight: 1.5 }}>
+            <div style={{ marginBottom: 12, padding: "8px 14px", background: t.redBg, border: `1px solid ${t.redText}30`, borderRadius: 8, fontSize: 11, color: t.redText, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", textAlign: "left", lineHeight: 1.5 }}>
               ⚠ {error}
             </div>
           )}
 
           {loading && (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, padding: "20px 0", color: t.textDim, fontFamily: "'JetBrains Mono',monospace", fontSize: 13 }}>
-              <Spinner color={t.blue} /> Signing in with Google...
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, padding: "20px 0", color: t.textDim, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", fontSize: 13 }}>
+              <Spinner color={t.blue} /> Please wait...
             </div>
           )}
 
           {!loading && step === "choose" && (
             <>
               <button
-                onClick={googleLogin}
-                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, width: "100%", padding: "13px 20px", background: "#fff", color: "#333", border: "none", borderRadius: 12, fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "'JetBrains Mono',monospace", boxShadow: "0 4px 24px rgba(0,0,0,0.2)", marginBottom: 12, transition: "all 0.18s" }}
-                onMouseEnter={e => { (e.currentTarget as any).style.transform = "translateY(-2px)"; (e.currentTarget as any).style.boxShadow = "0 10px 32px rgba(0,0,0,0.3)"; }}
-                onMouseLeave={e => { (e.currentTarget as any).style.transform = "none"; (e.currentTarget as any).style.boxShadow = "0 4px 24px rgba(0,0,0,0.2)"; }}>
-                <svg width="20" height="20" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                </svg>
-                Continue with Google
-              </button>
-
-              <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "14px 0" }}>
-                <div style={{ flex: 1, height: 1, background: t.border }} />
-                <span style={{ fontSize: 9, color: t.textFaint, fontFamily: "'JetBrains Mono',monospace" }}>OR</span>
-                <div style={{ flex: 1, height: 1, background: t.border }} />
-              </div>
-
-              <button
                 onClick={() => { setStep("manual"); setError(""); }}
-                style={{ width: "100%", padding: "12px", fontSize: 12, background: "transparent", border: `1px solid ${t.border2}`, borderRadius: 10, color: t.textDim, fontFamily: "'JetBrains Mono',monospace", cursor: "pointer", transition: "all 0.18s", marginBottom: 8 }}
+                style={{ width: "100%", padding: "12px", fontSize: 12, background: "transparent", border: `1px solid ${t.border2}`, borderRadius: 10, color: t.textDim, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", cursor: "pointer", transition: "all 0.18s", marginBottom: 8 }}
                 onMouseEnter={e => { (e.currentTarget as any).style.borderColor = t.blue; (e.currentTarget as any).style.color = t.blue; }}
                 onMouseLeave={e => { (e.currentTarget as any).style.borderColor = t.border2; (e.currentTarget as any).style.color = t.textDim; }}>
                 Sign in with Email & OTP
@@ -883,7 +1326,7 @@ function LoginScreen({ onLogin, t }: any) {
 
               <button
                 onClick={demoLogin}
-                style={{ width: "100%", padding: "10px", fontSize: 11, background: "transparent", border: `1px solid ${t.border}`, borderRadius: 10, color: t.textFaint, fontFamily: "'JetBrains Mono',monospace", cursor: "pointer", transition: "all 0.18s" }}
+                style={{ width: "100%", padding: "10px", fontSize: 11, background: "transparent", border: `1px solid ${t.border}`, borderRadius: 10, color: t.textFaint, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", cursor: "pointer", transition: "all 0.18s" }}
                 onMouseEnter={e => { (e.currentTarget as any).style.color = t.textDim; }}
                 onMouseLeave={e => { (e.currentTarget as any).style.color = t.textFaint; }}>
                 🚀 Try Demo (no login)
@@ -901,13 +1344,13 @@ function LoginScreen({ onLogin, t }: any) {
                 </button>
               ) : (
                 <>
-                  <div style={{ padding: "8px 12px", background: t.greenBg, border: `1px solid ${t.green}30`, borderRadius: 8, fontSize: 11, color: t.green, fontFamily: "'JetBrains Mono',monospace", marginBottom: 10 }}>✓ OTP sent to {email}</div>
+                  <div style={{ padding: "8px 12px", background: t.greenBg, border: `1px solid ${t.green}30`, borderRadius: 8, fontSize: 11, color: t.green, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", marginBottom: 10 }}>✓ OTP sent to {email}</div>
                   <input value={otp} onChange={e => setOtp(e.target.value)} placeholder="6-digit OTP" maxLength={6} style={inp()} onFocus={e => (e.target as any).style.borderColor = t.blue} onBlur={e => (e.target as any).style.borderColor = t.border} />
                   <button className="btn-primary" style={{ width: "100%", padding: "12px", fontSize: 13, marginBottom: 8 }} onClick={verifyOtp}>Verify & Login →</button>
-                  <button onClick={() => setOtpSent(false)} style={{ width: "100%", padding: "6px", fontSize: 10, background: "transparent", border: "none", color: t.textFaint, fontFamily: "'JetBrains Mono',monospace", cursor: "pointer" }}>Resend OTP</button>
+                  <button onClick={() => setOtpSent(false)} style={{ width: "100%", padding: "6px", fontSize: 10, background: "transparent", border: "none", color: t.textFaint, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", cursor: "pointer" }}>Resend OTP</button>
                 </>
               )}
-              <button onClick={() => { setStep("choose"); setError(""); setOtpSent(false); }} style={{ width: "100%", padding: "6px", fontSize: 10, background: "transparent", border: "none", color: t.textFaint, fontFamily: "'JetBrains Mono',monospace", cursor: "pointer", marginTop: 4 }}>← Back</button>
+              <button onClick={() => { setStep("choose"); setError(""); setOtpSent(false); }} style={{ width: "100%", padding: "6px", fontSize: 10, background: "transparent", border: "none", color: t.textFaint, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", cursor: "pointer", marginTop: 4 }}>← Back</button>
             </div>
           )}
         </div>
@@ -919,12 +1362,33 @@ function LoginScreen({ onLogin, t }: any) {
 // ─────────────────────────────────────────────────────────────────
 // EDITOR PANEL
 // ─────────────────────────────────────────────────────────────────
-function EditorPanel({ code, setCode, onAnalyze, analyzing, results, language, setLanguage, t, settings, onFix, onOptimize, fixedCode, optimizedCode }: any) {
+function EditorPanel({ code, setCode, onAnalyze, analyzing, analyzeStep, results, language, setLanguage, t, settings, onFix, onOptimize, fixedCode, optimizedCode, isFullScreen, setIsFullScreen, setMobileOpen }: any) {
   const taRef = useRef<HTMLTextAreaElement>(null);
   const [showLang, setShowLang] = useState(false);
   const [view, setView] = useState<"original" | "fixed" | "optimized">("original");
   const [aiLoading, setAiLoading] = useState<string | null>(null);
+  const [mode, setMode] = useState<"edit" | "review">("edit");
   const scoreColor = (v: number) => v >= 7 ? t.green : v >= 4 ? t.orange : t.red;
+
+  useEffect(() => {
+    if (results) {
+      setMode("review");
+    } else {
+      setMode("edit");
+    }
+  }, [results]);
+
+  useEffect(() => {
+    if (fixedCode) {
+      setView("fixed");
+    }
+  }, [fixedCode]);
+
+  useEffect(() => {
+    if (optimizedCode) {
+      setView("optimized");
+    }
+  }, [optimizedCode]);
 
   const handleKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Tab") {
@@ -943,78 +1407,170 @@ function EditorPanel({ code, setCode, onAnalyze, analyzing, results, language, s
   const displayed = view === "fixed" && fixedCode ? fixedCode : view === "optimized" && optimizedCode ? optimizedCode : code;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {/* Toolbar */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", gap: 5 }}>
-          {["#f87171", "#fb923c", "#4ade80"].map(c => <div key={c} style={{ width: 11, height: 11, borderRadius: "50%", background: c, boxShadow: `0 0 6px ${c}50` }} />)}
-        </div>
-        <span style={{ fontSize: 11, color: t.textFaint, fontFamily: "'JetBrains Mono',monospace" }}>editor</span>
-        <div style={{ marginLeft: "auto", display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-          <div style={{ position: "relative" }}>
-            <button onClick={() => setShowLang(v => !v)} style={{ padding: "5px 12px", fontSize: 11, background: "transparent", border: `1px solid ${t.blue}`, borderRadius: 6, color: t.blue, fontFamily: "'JetBrains Mono',monospace", cursor: "pointer" }}>
-              {language} ▾
-            </button>
-            {showLang && (
-              <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, background: t.card, border: `1px solid ${t.border2}`, borderRadius: 10, padding: 6, zIndex: 100, minWidth: 160, maxHeight: 240, overflowY: "auto", boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}>
-                {LANGUAGES.map(l => (
-                  <div key={l} onClick={() => { setLanguage(l); setShowLang(false); }}
-                    style={{ padding: "6px 10px", fontSize: 11, borderRadius: 6, cursor: "pointer", fontFamily: "'JetBrains Mono',monospace", color: l === language ? t.blue : t.textDim, background: l === language ? t.navActive : "transparent", transition: "all 0.15s" }}
-                    onMouseEnter={e => (e.currentTarget as any).style.background = t.navHover}
-                    onMouseLeave={e => (e.currentTarget as any).style.background = l === language ? t.navActive : "transparent"}>
-                    {l}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          <button onClick={() => setCode("")} style={{ padding: "5px 12px", fontSize: 11, background: "transparent", border: `1px solid ${t.border2}`, borderRadius: 6, color: t.textDim, fontFamily: "'JetBrains Mono',monospace", cursor: "pointer" }}>Clear</button>
-          <button onClick={() => { setCode(SAMPLE); setLanguage("JavaScript"); }} style={{ padding: "5px 12px", fontSize: 11, background: "transparent", border: `1px solid ${t.border2}`, borderRadius: 6, color: t.textDim, fontFamily: "'JetBrains Mono',monospace", cursor: "pointer" }}>Sample</button>
-          <button className="btn-primary" style={{ padding: "8px 18px", fontSize: 12, fontWeight: 700 }} onClick={onAnalyze} disabled={analyzing || code.trim().length < 10}>
-            {analyzing ? "Analyzing..." : "[ Analyze ]"}
+    <div style={isFullScreen ? {
+      position: "fixed",
+      inset: 0,
+      zIndex: 9999,
+      background: t.bg,
+      display: "flex",
+      flexDirection: "column",
+      gap: 0,
+      height: "100vh",
+      width: "100vw",
+      overflow: "hidden",
+    } : {
+      display: "flex",
+      flexDirection: "column",
+      gap: 12,
+    }}>
+      {/* Toolbar — all controls left-aligned, Run Analysis on right */}
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "flex-start",
+        gap: 8,
+        padding: "8px 14px",
+        background: t.headerBg,
+        borderBottom: `1px solid ${t.border}`,
+        borderRadius: 0,
+        flexWrap: "wrap",
+        minHeight: 52,
+        boxShadow: `0 2px 12px rgba(0,0,0,0.1)`,
+        margin: isFullScreen ? 0 : (settings?.compactMode ? "-10px -10px 12px -10px" : "-16px -16px 16px -16px"),
+        backdropFilter: "blur(20px)"
+      }}>
+        {setMobileOpen && (
+          <button className="mobile-only" style={{ padding: "6px 10px", background: "transparent", border: `1px solid ${t.border2}`, borderRadius: 6, color: t.textDim, cursor: "pointer", fontSize: 14, display: "none" }} onClick={() => setMobileOpen(true)}>☰</button>
+        )}
+        
+        {/* Language selector */}
+        <div style={{ position: "relative" }}>
+          <button className="lang-btn" onClick={() => setShowLang(v => !v)}>
+            <span style={{ fontSize: 10 }}>◈</span> {language} <span style={{ fontSize: 9, opacity: 0.7 }}>▾</span>
           </button>
+          {showLang && (
+            <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, background: t.card, border: `1px solid ${t.border2}`, borderRadius: 10, padding: 5, zIndex: 100, minWidth: 170, maxHeight: 260, overflowY: "auto", boxShadow: `0 10px 36px rgba(0,0,0,0.22), 0 2px 8px rgba(0,0,0,0.12)` }}>
+              {LANGUAGES.map(l => (
+                <div key={l} onClick={() => { setLanguage(l); setShowLang(false); }}
+                  style={{ padding: "7px 11px", fontSize: 11.5, borderRadius: 6, cursor: "pointer", fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif", color: l === language ? t.blue : t.textDim, background: l === language ? t.navActive : "transparent", fontWeight: l === language ? 700 : 500, transition: "all 0.12s" }}
+                  onMouseEnter={e => (e.currentTarget as any).style.background = t.navHover}
+                  onMouseLeave={e => (e.currentTarget as any).style.background = l === language ? t.navActive : "transparent"}>
+                  {l}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
+
+        {/* Ghost action buttons */}
+        <button className="toolbar-btn" onClick={() => setCode("")}>Clear</button>
+        <button className="toolbar-btn" onClick={() => { setCode(SAMPLE); setLanguage("JavaScript"); }}>Sample</button>
+        <button className={`toolbar-btn${isFullScreen ? " active" : ""}`} onClick={() => setIsFullScreen(!isFullScreen)}>
+          {isFullScreen ? "Exit Full Screen" : "Full Screen"}
+        </button>
+
+        {/* Primary CTA aligned to right */}
+        <button className="btn-primary" style={{
+          marginLeft: "auto",
+          height: 36,
+          padding: "0 22px",
+          fontSize: 12.5,
+          fontWeight: 800,
+          letterSpacing: "0.02em",
+          display: "flex",
+          alignItems: "center",
+          gap: 7,
+          boxShadow: `0 4px 20px ${t.accent}50, 0 2px 8px rgba(0,0,0,0.15)`,
+          borderRadius: 8,
+        }} onClick={onAnalyze} disabled={analyzing || code.trim().length < 10}>
+          {analyzing
+            ? <span style={{ display: "flex", alignItems: "center", gap: 7 }}><Spinner color="#fff" size={12} /> {analyzeStep || "Analyzing..."}</span>
+            : "⚡ Run Analysis"}
+        </button>
       </div>
-
-      {/* View toggle */}
-      {(fixedCode || optimizedCode) && (
-        <div style={{ display: "flex", gap: 6 }}>
-          {(["original", "fixed", "optimized"] as const).map(v => (
-            <button key={v} onClick={() => setView(v)} style={{ padding: "5px 12px", fontSize: 11, borderRadius: 6, cursor: "pointer", fontFamily: "'JetBrains Mono',monospace", background: view === v ? `${t.blue}15` : "transparent", border: `1px solid ${view === v ? t.blue : t.border2}`, color: view === v ? t.blue : t.textDim, transition: "all 0.18s" }}>
-              {v === "original" ? "📄 Original" : v === "fixed" ? "🔒 AI Fixed" : "⚡ AI Optimized"}
+ 
+      {/* View & Edit Mode Toggles */}
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+        {results && (
+          <div style={{ display: "flex", background: t.card2, padding: 3, borderRadius: 8, border: `1px solid ${t.border}` }}>
+            <button onClick={() => { setMode("edit"); setView("original"); }} style={{ padding: "6px 12px", fontSize: 11, border: "none", borderRadius: 6, cursor: "pointer", background: mode === "edit" ? t.blue : "transparent", color: mode === "edit" ? "#fff" : t.textDim, fontWeight: mode === "edit" ? 700 : 500, transition: "all 0.15s" }}>
+              📝 Edit Code
             </button>
-          ))}
-        </div>
-      )}
-
-      {/* Code area */}
-      <div style={{ display: "flex", background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, overflow: "hidden", minHeight: 380, boxShadow: `0 8px 32px rgba(0,0,0,0.15)` }}>
-        {settings.showLineNumbers && (
-          <div style={{ padding: "16px 0", minWidth: 52, background: t.headerBg, borderRight: `1px solid ${t.border}`, textAlign: "right", userSelect: "none", flexShrink: 0 }}>
-            {displayed.split("\n").map((_: any, i: number) => {
-              const hasIssue = results?.issues?.some((iss: any) => iss.line === i + 1);
-              return <div key={i} style={{ padding: "0 12px", lineHeight: `${settings.fontSize * 1.75}px`, fontSize: 10, color: hasIssue && settings.highlightErrors ? t.red : t.textGhost, fontFamily: "'JetBrains Mono',monospace", background: hasIssue && settings.highlightErrors ? `${t.red}08` : "transparent" }}>{i + 1}</div>;
+            <button onClick={() => { setMode("review"); setView("original"); }} style={{ padding: "6px 12px", fontSize: 11, border: "none", borderRadius: 6, cursor: "pointer", background: mode === "review" ? t.blue : "transparent", color: mode === "review" ? "#fff" : t.textDim, fontWeight: mode === "review" ? 700 : 500, transition: "all 0.15s" }}>
+              🔍 Review Issues
+            </button>
+          </div>
+        )}
+        
+        {(fixedCode || optimizedCode) && (
+          <div style={{ display: "flex", gap: 6 }}>
+            {(["original", "fixed", "optimized"] as const).map(v => {
+              if (v === "fixed" && !fixedCode) return null;
+              if (v === "optimized" && !optimizedCode) return null;
+              return (
+                <button key={v} onClick={() => setView(v)} style={{ padding: "6px 12px", fontSize: 11, borderRadius: 8, cursor: "pointer", fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif", background: view === v ? `${t.blue}15` : "transparent", border: `1px solid ${view === v ? t.blue : t.border2}`, color: view === v ? t.blue : t.textDim, transition: "all 0.18s", fontWeight: view === v ? 700 : 400 }}>
+                  {v === "original" ? "📄 Original" : v === "fixed" ? "🔒 AI Fixed Diff" : "⚡ AI Optimized Diff"}
+                </button>
+              );
             })}
           </div>
         )}
-        <div style={{ flex: 1, position: "relative", padding: "16px 18px", overflow: "auto" }}>
-          <textarea
-            ref={taRef}
-            value={displayed}
-            onChange={e => view === "original" && setCode(e.target.value)}
-            onKeyDown={handleKey}
-            onPaste={handlePaste}
-            spellCheck={false}
-            readOnly={view !== "original"}
-            placeholder={"// Paste your code here\n// Guru AI will detect:\n//   • Security vulnerabilities\n//   • Performance issues\n//   • Complexity problems\n//   • And more..."}
-            style={{ width: "100%", minHeight: 360, resize: "none", outline: "none", border: "none", background: "transparent", color: t.text, fontFamily: "'JetBrains Mono',monospace", fontSize: settings.fontSize, lineHeight: 1.75, caretColor: t.blue, height: `${Math.max(360, displayed.split("\n").length * settings.fontSize * 1.75)}px` }}
-          />
-        </div>
       </div>
-
-
+ 
+      {/* Code area */}
+      <div style={{
+        display: "flex",
+        background: t.card,
+        border: isFullScreen ? "none" : `1px solid ${t.border}`,
+        borderRadius: isFullScreen ? 0 : 12,
+        overflow: "hidden",
+        flex: isFullScreen ? 1 : undefined,
+        height: isFullScreen ? undefined : "calc(100vh - 200px)",
+        minHeight: isFullScreen ? 0 : 550,
+        boxShadow: isFullScreen ? "none" : `0 8px 32px rgba(0,0,0,0.15)`,
+        position: "relative",
+      }}>
+        {view === "original" && mode === "review" && results ? (
+          <div style={{ flex: 1, overflow: "auto" }}>
+            <CodeReviewViewer code={code} results={results} t={t} />
+          </div>
+        ) : view === "fixed" && fixedCode ? (
+          <div style={{ flex: 1, overflow: "auto" }}>
+            <DiffViewer oldCode={code} newCode={fixedCode} t={t} />
+          </div>
+        ) : view === "optimized" && optimizedCode ? (
+          <div style={{ flex: 1, overflow: "auto" }}>
+            <DiffViewer oldCode={code} newCode={optimizedCode} t={t} />
+          </div>
+        ) : (
+          <>
+            {settings.showLineNumbers && (
+              <div style={{ padding: "16px 0", minWidth: 52, background: t.headerBg, borderRight: `1px solid ${t.border}`, textAlign: "right", userSelect: "none", flexShrink: 0 }}>
+                {displayed.split("\n").map((_: any, i: number) => {
+                  const hasIssue = results?.issues?.some((iss: any) => iss.line === i + 1);
+                  return <div key={i} style={{ padding: "0 12px", lineHeight: `${settings.fontSize * 1.75}px`, fontSize: 10, color: hasIssue && settings.highlightErrors ? t.red : t.textGhost, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif", background: hasIssue && settings.highlightErrors ? `${t.red}08` : "transparent" }}>{i + 1}</div>;
+                })}
+              </div>
+            )}
+            <div style={{ flex: 1, position: "relative", padding: "16px 18px", overflow: "auto" }}>
+              <textarea
+                ref={taRef}
+                value={displayed}
+                onChange={e => view === "original" && setCode(e.target.value)}
+                onKeyDown={handleKey}
+                onPaste={handlePaste}
+                spellCheck={false}
+                readOnly={view !== "original"}
+                placeholder={"// Paste your code here...\n// Guru AI will analyze:\n//   \u2022 Security vulnerabilities\n//   \u2022 Performance issues\n//   \u2022 Complexity problems\n//   \u2022 Code quality issues"}
+                style={{ width: "100%", minHeight: isFullScreen ? "100%" : 360, resize: "none", outline: "none", border: "none", background: "transparent", color: t.text, fontFamily: "'JetBrains Mono', 'Cascadia Code', 'SF Mono', 'Fira Code', Consolas, monospace", fontSize: settings.fontSize, lineHeight: 1.75, caretColor: t.blue, height: isFullScreen ? "100%" : `${Math.max(500, displayed.split("\n").length * settings.fontSize * 1.75)}px` }}
+              />
+            </div>
+          </>
+        )}
+      </div>
+ 
       {/* Results stats */}
-      {results && (
+      {!isFullScreen && results && (
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", animation: "fadeUp 0.35s cubic-bezier(0.22,1,0.36,1)" }}>
           {[
             { val: results.critical, label: "CRITICAL", color: "#f87171" },
@@ -1023,55 +1579,56 @@ function EditorPanel({ code, setCode, onAnalyze, analyzing, results, language, s
             { val: results.info || 0, label: "INFO",   color: t.green },
           ].map(r => (
             <div key={r.label} style={{ flex: 1, minWidth: 90, padding: "14px", background: `${r.color}10`, border: `1px solid ${r.color}30`, borderRadius: 12, textAlign: "center" }}>
-              <div style={{ fontSize: 26, fontWeight: 900, color: r.color, fontFamily: "'Syne',sans-serif" }}>{r.val}</div>
-              <div style={{ fontSize: 9, color: `${r.color}90`, fontFamily: "'JetBrains Mono',monospace", marginTop: 4 }}>{r.label}</div>
+              <div style={{ fontSize: 26, fontWeight: 900, color: r.color, fontFamily: "'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif" }}>{r.val}</div>
+              <div style={{ fontSize: 9, color: `${r.color}90`, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif", marginTop: 4 }}>{r.label}</div>
             </div>
           ))}
           {results.scores && Object.entries(results.scores).map(([k, v]: any) => (
             <div key={k} style={{ flex: 1, minWidth: 90, padding: "14px", background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, textAlign: "center" }}>
-              <div style={{ fontSize: 22, fontWeight: 800, color: scoreColor(v), fontFamily: "'Syne',sans-serif" }}>{v.toFixed(1)}</div>
-              <div style={{ fontSize: 9, color: t.textFaint, fontFamily: "'JetBrains Mono',monospace", marginTop: 4, textTransform: "capitalize" }}>{k}</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: scoreColor(v), fontFamily: "'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif" }}>{v.toFixed(1)}</div>
+              <div style={{ fontSize: 9, color: t.textFaint, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif", marginTop: 4, textTransform: "capitalize" }}>{k}</div>
             </div>
           ))}
         </div>
       )}
-
+ 
       {/* AI action buttons */}
-      {results && results.issues?.length > 0 && (
+      {!isFullScreen && results && results.issues?.length > 0 && (
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button onClick={async () => { setAiLoading("fix"); await onFix(); setAiLoading(null); }} disabled={!!aiLoading} className="btn-primary" style={{ padding: "9px 18px", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}>
-            {aiLoading === "fix" ? <><Spinner color="#fff" size={14} /> Fixing...</> : "🔒 AI Fix Issues"}
+          <button onClick={async () => { setAiLoading("fix"); await onFix(); setAiLoading(null); }} disabled={!!aiLoading} className="btn-primary" style={{ padding: "10px 20px", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}>
+            {aiLoading === "fix" ? <><Spinner color="#fff" size={14} /> Fixing...</> : "✨ Fix with AI"}
           </button>
-          <button onClick={async () => { setAiLoading("opt"); await onOptimize(); setAiLoading(null); }} disabled={!!aiLoading} className="btn-primary" style={{ padding: "9px 18px", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}>
+          <button onClick={async () => { setAiLoading("opt"); await onOptimize(); setAiLoading(null); }} disabled={!!aiLoading} className="btn-primary" style={{ padding: "10px 20px", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}>
             {aiLoading === "opt" ? <><Spinner color="#fff" size={14} /> Optimizing...</> : "⚡ AI Optimize"}
           </button>
         </div>
       )}
-
-      {/* Plagiarism */}
-      {results?.plagiarism?.length > 0 && (
+ 
+      {/* Plagiarism - Only show after AI Fix generated */}
+      {!isFullScreen && fixedCode && results?.plagiarism?.length > 0 && (
         <div style={{ padding: "12px 16px", background: t.orangeBg, border: `1px solid ${t.orange}40`, borderRadius: 12 }}>
-          <div style={{ fontSize: 12, color: t.orange, fontFamily: "'JetBrains Mono',monospace", fontWeight: 700, marginBottom: 8 }}>🔍 Possible Plagiarism Detected</div>
+          <div style={{ fontSize: 12, color: t.orange, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif", fontWeight: 700, marginBottom: 8 }}>🔍 Possible Plagiarism Detected</div>
           {results.plagiarism.map((p: any, i: number) => (
-            <div key={i} style={{ fontSize: 11, color: t.textDim, fontFamily: "'JetBrains Mono',monospace", marginBottom: 4 }}>
+            <div key={i} style={{ fontSize: 11, color: t.textDim, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif", marginBottom: 4 }}>
               • <strong style={{ color: t.text }}>{p.match}</strong> — similar to: {p.source}
             </div>
           ))}
         </div>
       )}
-
-      {/* Optimizations */}
-      {results?.optimizations?.length > 0 && (
+ 
+      {/* Optimizations - Only show after AI Fix generated */}
+      {!isFullScreen && fixedCode && results?.optimizations?.length > 0 && (
         <div style={{ padding: "12px 16px", background: `${t.blue}08`, border: `1px solid ${t.blue}20`, borderRadius: 12 }}>
-          <div style={{ fontSize: 12, color: t.blue, fontFamily: "'JetBrains Mono',monospace", fontWeight: 700, marginBottom: 8 }}>⚡ Optimization Suggestions</div>
+          <div style={{ fontSize: 12, color: t.blue, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif", fontWeight: 700, marginBottom: 8 }}>⚡ Optimization Suggestions</div>
           {results.optimizations.map((o: any, i: number) => (
-            <div key={i} style={{ fontSize: 11, color: t.textDim, fontFamily: "'JetBrains Mono',monospace", marginBottom: 4 }}>• {o.msg}</div>
+            <div key={i} style={{ fontSize: 11, color: t.textDim, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif", marginBottom: 4 }}>• {o.msg}</div>
           ))}
         </div>
       )}
-
-      {results?.summary && (
-        <div style={{ padding: "12px 16px", background: `${t.blue}08`, border: `1px solid ${t.blue}20`, borderRadius: 12, fontSize: 12, color: t.textDim, fontFamily: "'JetBrains Mono',monospace", lineHeight: 1.7 }}>
+ 
+      {/* Summary - Only show after AI Fix generated */}
+      {!isFullScreen && fixedCode && results?.summary && (
+        <div style={{ padding: "12px 16px", background: `${t.blue}08`, border: `1px solid ${t.blue}20`, borderRadius: 12, fontSize: 12, color: t.textDim, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif", lineHeight: 1.7 }}>
           <span style={{ color: t.blue, fontWeight: 700 }}>AI Summary: </span>{results.summary}
         </div>
       )}
@@ -1097,6 +1654,8 @@ Your task:
 4. Never return fake or generic responses.
 5. Never always return O(n). Analyze loops, recursion, nested loops, maps, sorting, DFS/BFS, DP, binary search, etc correctly.
 6. If no syntax error exists, clearly say: "No syntax errors found."
+7. If no syntax error exists, analyze the code and dynamically generate possible edge cases (e.g. Empty input, Negative numbers, Large input size).
+8. If no syntax error exists, generate suggested test cases based on the logic. Set the first two test cases with locked: false, and the rest with locked: true.
 
 Rules:
 * Analyze code language automatically.
@@ -1105,6 +1664,7 @@ Rules:
 * Do not hallucinate errors.
 * Distinguish between syntax errors and warnings.
 * Detect missing semicolons, unmatched brackets, undeclared variables, invalid imports, wrong function calls, type issues, etc.
+* Do NOT use fixed examples for test cases; generate them dynamically according to the submitted code.
 
 Output format strictly:
 {
@@ -1112,7 +1672,13 @@ Output format strictly:
 "warnings": [],
 "timeComplexity": "",
 "spaceComplexity": "",
-"explanation": ""
+"explanation": "",
+"edgeCases": ["Empty Array", "Duplicate Elements", "Maximum Constraints"],
+"testCases": [
+  { "input": "...", "output": "...", "explanation": "...", "locked": false },
+  { "input": "...", "output": "...", "explanation": "...", "locked": false },
+  { "input": "...", "output": "...", "explanation": "...", "locked": true }
+]
 }
 
 Examples:
@@ -1128,6 +1694,7 @@ Important:
 * If code contains nested loops + sorting, combine complexities properly.
 * Do not generate placeholder outputs.
 * If code is incomplete, clearly mention: "Incomplete code provided."
+* If you cannot confidently infer suitable test cases, leave the edgeCases and testCases arrays empty.
 
 Code to analyze:
 \`\`\`
@@ -1197,11 +1764,11 @@ ${code.slice(0, 3000)}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 16 }}>
               <div style={{ fontSize: 10, color: t.textFaint, textTransform: "uppercase", marginBottom: 8, letterSpacing: 0.5 }}>Time Complexity</div>
-              <div style={{ fontSize: 24, fontWeight: 900, color: t.blue, fontFamily: "'Syne',sans-serif" }}>{result.timeComplexity || "N/A"}</div>
+              <div style={{ fontSize: 24, fontWeight: 900, color: t.blue, fontFamily: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>{result.timeComplexity || "N/A"}</div>
             </div>
             <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 16 }}>
               <div style={{ fontSize: 10, color: t.textFaint, textTransform: "uppercase", marginBottom: 8, letterSpacing: 0.5 }}>Space Complexity</div>
-              <div style={{ fontSize: 24, fontWeight: 900, color: t.orange, fontFamily: "'Syne',sans-serif" }}>{result.spaceComplexity || "N/A"}</div>
+              <div style={{ fontSize: 24, fontWeight: 900, color: t.orange, fontFamily: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>{result.spaceComplexity || "N/A"}</div>
             </div>
           </div>
 
@@ -1248,6 +1815,75 @@ ${code.slice(0, 3000)}
             </div>
           </div>
           
+          {result.syntaxErrors && result.syntaxErrors.length > 0 ? (
+            <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 16, textAlign: "center", color: t.orange }}>
+              Fix syntax errors first. Test cases will be generated after successful code parsing.
+            </div>
+          ) : (
+            <>
+              {result.edgeCases && result.edgeCases.length > 0 && (
+                <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 16, animation: "fadeUp 0.3s ease-out" }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: t.text, marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: 16 }}>🎯</span> Detected Edge Cases
+                  </div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {result.edgeCases.map((ec: string, i: number) => (
+                      <div key={i} style={{ padding: "6px 12px", background: t.orangeBg, color: t.orange, borderRadius: 20, fontSize: 11, fontWeight: 600, border: `1px solid ${t.orange}40`, display: "flex", alignItems: "center", gap: 4 }}>
+                        ⚠ {ec}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {result.testCases && result.testCases.length > 0 ? (
+                <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 16, animation: "fadeUp 0.3s ease-out" }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: t.green, marginBottom: 16, display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: 16 }}>🧪</span> Suggested Test Cases
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                    {result.testCases.map((tc: any, i: number) => (
+                      <div key={i} style={{ 
+                        border: `1px solid ${t.border}`, 
+                        borderRadius: 8, 
+                        overflow: "hidden", 
+                        position: "relative",
+                        background: t.panelBg
+                      }}>
+                        <div style={{ padding: "10px 14px", background: tc.locked ? t.border : t.greenBg, borderBottom: `1px solid ${t.border}`, fontSize: 12, fontWeight: 700, color: tc.locked ? t.textFaint : t.green, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span>{tc.locked ? "🔒 Premium Test Case" : `✅ Example Test Case ${i + 1}`}</span>
+                          {tc.locked && <span style={{ fontSize: 10, background: t.blue, color: "#fff", padding: "2px 8px", borderRadius: 12 }}>PRO</span>}
+                        </div>
+                        <div style={{ padding: 14, filter: tc.locked ? "blur(4px)" : "none", pointerEvents: tc.locked ? "none" : "auto", userSelect: tc.locked ? "none" : "auto" }}>
+                          <div style={{ fontSize: 11, color: t.textFaint, marginBottom: 4 }}>Input:</div>
+                          <div style={{ fontSize: 12, fontFamily: "monospace", color: t.text, marginBottom: 12, background: t.card, padding: 8, borderRadius: 6 }}>{tc.input || "..."}</div>
+                          
+                          <div style={{ fontSize: 11, color: t.textFaint, marginBottom: 4 }}>Expected Output:</div>
+                          <div style={{ fontSize: 12, fontFamily: "monospace", color: t.text, marginBottom: 12, background: t.card, padding: 8, borderRadius: 6 }}>{tc.output || "..."}</div>
+                          
+                          <div style={{ fontSize: 11, color: t.textFaint, marginBottom: 4 }}>Explanation:</div>
+                          <div style={{ fontSize: 12, color: t.text }}>{tc.explanation || "..."}</div>
+                        </div>
+                        {tc.locked && (
+                          <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.4)" }}>
+                            <div style={{ fontSize: 24, marginBottom: 8 }}>🔒</div>
+                            <button style={{ padding: "8px 16px", background: `linear-gradient(90deg, ${t.blue}, ${t.blueDark})`, color: "#fff", border: "none", borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 12px rgba(0,0,0,0.2)" }}>
+                              Unlock Premium
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 16, textAlign: "center", color: t.textFaint, fontSize: 12 }}>
+                  Unable to generate accurate test cases for this code.
+                </div>
+              )}
+            </>
+          )}
+          
         </div>
       )}
     </div>
@@ -1274,14 +1910,14 @@ function IssuesPanel({ results, onExplain, t }: any) {
     setExpLoading(false);
   };
 
-  if (!results) return <div style={{ padding: "40px", textAlign: "center", color: t.textFaint, fontFamily: "'JetBrains Mono',monospace", fontSize: 13 }}>Run analysis first to see issues.</div>;
-  if (issues.length === 0) return <div style={{ padding: "40px", textAlign: "center", color: t.green, fontFamily: "'JetBrains Mono',monospace", fontSize: 13 }}>✓ No issues found! Code looks clean.</div>;
+  if (!results) return <div style={{ padding: "40px", textAlign: "center", color: t.textFaint, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", fontSize: 13 }}>Run analysis first to see issues.</div>;
+  if (issues.length === 0) return <div style={{ padding: "40px", textAlign: "center", color: t.green, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", fontSize: 13 }}>✓ No issues found! Code looks clean.</div>;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
         {["all", "critical", "warning", "info"].map(f => (
-          <button key={f} onClick={() => setFilter(f)} style={{ padding: "3px 12px", fontSize: 10, borderRadius: 20, cursor: "pointer", fontFamily: "'JetBrains Mono',monospace", transition: "all 0.18s", background: filter === f ? t.blue : "transparent", color: filter === f ? "#fff" : t.textFaint, border: `1px solid ${filter === f ? t.blue : t.border2}` }}>
+          <button key={f} onClick={() => setFilter(f)} style={{ padding: "3px 12px", fontSize: 10, borderRadius: 20, cursor: "pointer", fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", transition: "all 0.18s", background: filter === f ? t.blue : "transparent", color: filter === f ? "#fff" : t.textFaint, border: `1px solid ${filter === f ? t.blue : t.border2}` }}>
             {f === "all"      ? `All (${issues.length})` :
              f === "critical" ? `🔴 Critical (${issues.filter((i: any) => i.severity === "critical").length})` :
              f === "warning"  ? `🟠 Warning (${issues.filter((i: any) => i.severity === "warning").length})` :
@@ -1295,31 +1931,32 @@ function IssuesPanel({ results, onExplain, t }: any) {
         return (
           <div key={`${issue.line}-${issue.title}-${idx}`} className="issue-card" style={{ background: t.card, border: `1px solid ${isOpen ? t.blue + "60" : t.border}`, borderRadius: 12, padding: "14px 16px", animation: `slideLeft 0.25s ${Math.min(idx, 10) * 0.05}s both` }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 10, padding: "3px 9px", borderRadius: 6, background: s.bg, color: s.text, fontFamily: "'JetBrains Mono',monospace", fontWeight: 700, flexShrink: 0 }}>{s.label}</span>
+              <span style={{ fontSize: 10, padding: "3px 9px", borderRadius: 6, background: s.bg, color: s.text, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", fontWeight: 700, flexShrink: 0 }}>{s.label}</span>
+              <span style={{ fontSize: 14 }}>{getIssueIcon(issue)}</span>
               <span style={{ fontSize: 13, color: t.text, fontWeight: 500, flex: 1 }}>{issue.title}</span>
               <button
                 onClick={() => { if (isOpen) { setExplainOpen(null); } else { handleExplain(issue); } }}
-                style={{ fontSize: 11, padding: "4px 12px", border: `1px solid ${t.border2}`, borderRadius: 20, background: "transparent", color: t.orange, cursor: "pointer", fontFamily: "'JetBrains Mono',monospace", transition: "all 0.18s", whiteSpace: "nowrap" }}
+                style={{ fontSize: 11, padding: "4px 12px", border: `1px solid ${t.border2}`, borderRadius: 20, background: "transparent", color: t.orange, cursor: "pointer", fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", transition: "all 0.18s", whiteSpace: "nowrap" }}
                 onMouseEnter={e => { (e.currentTarget as any).style.background = t.orangeBg; (e.currentTarget as any).style.borderColor = t.orange; }}
                 onMouseLeave={e => { (e.currentTarget as any).style.background = "transparent"; (e.currentTarget as any).style.borderColor = t.border2; }}>
                 {isOpen ? "Hide ▲" : "Why? [AI] ▾"}
               </button>
               <button
                 onClick={() => onExplain(`Explain "${issue.title}" and show the exact fix with code example`)}
-                style={{ fontSize: 11, padding: "4px 12px", border: `1px solid ${t.border2}`, borderRadius: 20, background: "transparent", color: t.blue, cursor: "pointer", fontFamily: "'JetBrains Mono',monospace", transition: "all 0.18s" }}>
+                style={{ fontSize: 11, padding: "4px 12px", border: `1px solid ${t.border2}`, borderRadius: 20, background: "transparent", color: t.blue, cursor: "pointer", fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", transition: "all 0.18s" }}>
                 Chat →
               </button>
             </div>
-            <div style={{ marginTop: 8, fontSize: 11, color: t.textDim, fontFamily: "'JetBrains Mono',monospace", background: t.headerBg, padding: "6px 12px", borderRadius: 6, borderLeft: `3px solid ${s.text}` }}>
+            <div style={{ marginTop: 8, fontSize: 11, color: t.textDim, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", background: t.headerBg, padding: "6px 12px", borderRadius: 6, borderLeft: `3px solid ${s.text}` }}>
               Line {issue.line} — {issue.snippet}
             </div>
-            {issue.description && <div style={{ marginTop: 6, fontSize: 11, color: t.textFaint, fontFamily: "'JetBrains Mono',monospace", lineHeight: 1.6 }}>{issue.description}</div>}
-            {issue.fix && <div style={{ marginTop: 4, fontSize: 11, color: t.green, fontFamily: "'JetBrains Mono',monospace" }}>💡 Fix: {issue.fix}</div>}
+            {issue.description && <div style={{ marginTop: 6, fontSize: 11, color: t.textFaint, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", lineHeight: 1.6 }}>{issue.description}</div>}
+            {issue.fix && <div style={{ marginTop: 4, fontSize: 11, color: t.green, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>💡 Fix: {issue.fix}</div>}
             {isOpen && (
               <div style={{ marginTop: 12, padding: "12px", background: t.card2, border: `1px solid ${t.border}`, borderRadius: 10, animation: "fadeUp 0.2s both" }}>
                 {expLoading
-                  ? <div style={{ display: "flex", alignItems: "center", gap: 10 }}><Spinner color={t.blue} /><span style={{ fontSize: 11, color: t.textDim, fontFamily: "'JetBrains Mono',monospace" }}>Guru AI is explaining...</span></div>
-                  : <div style={{ fontSize: 12, color: t.text, fontFamily: "'JetBrains Mono',monospace", whiteSpace: "pre-wrap", lineHeight: 1.8 }}>{explanation}</div>
+                  ? <div style={{ display: "flex", alignItems: "center", gap: 10 }}><Spinner color={t.blue} /><span style={{ fontSize: 11, color: t.textDim, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>Guru AI is explaining...</span></div>
+                  : <div style={{ fontSize: 12, color: t.text, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", whiteSpace: "pre-wrap", lineHeight: 1.8 }}>{explanation}</div>
                 }
               </div>
             )}
@@ -1344,25 +1981,25 @@ function OverviewPanel({ results, t }: any) {
       </div>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
         <div className="card-hover" style={{ flex: 1, minWidth: 200, background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 14 }}>
-          <div style={{ fontSize: 11, color: t.textFaint, fontFamily: "'JetBrains Mono',monospace", marginBottom: 8 }}>Quality Radar</div>
+          <div style={{ fontSize: 11, color: t.textFaint, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", marginBottom: 8 }}>Quality Radar</div>
           <ResponsiveContainer width="100%" height={180}>
             <RadarChart data={radarData}>
               <PolarGrid stroke={t.border} />
-              <PolarAngleAxis dataKey="subject" tick={{ fill: t.textDim, fontSize: 9, fontFamily: "'JetBrains Mono',monospace" }} />
+              <PolarAngleAxis dataKey="subject" tick={{ fill: t.textDim, fontSize: 9, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }} />
               <Radar dataKey="score" stroke={t.blue} fill={t.blue} fillOpacity={0.12} strokeWidth={2} dot={{ r: 3, fill: t.blue, strokeWidth: 0 }} />
-              <Tooltip contentStyle={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 8, fontFamily: "'JetBrains Mono',monospace", fontSize: 11 }} labelStyle={{ color: t.textDim }} itemStyle={{ color: t.blue }} />
+              <Tooltip contentStyle={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 8, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", fontSize: 11 }} labelStyle={{ color: t.textDim }} itemStyle={{ color: t.blue }} />
             </RadarChart>
           </ResponsiveContainer>
         </div>
         <div className="chart-flex" style={{ display: "flex", flexDirection: "column", gap: 12, flex: 1, minWidth: 200 }}>
           {[{ title: "Security — 30 days", data: SEC_TREND, color: "#f87171" }, { title: "Quality — 30 days", data: QUAL_TREND, color: "#4ade80" }].map(ch => (
             <div key={ch.title} className="card-hover" style={{ flex: 1, background: t.card2, border: `1px solid ${t.border}`, borderRadius: 12, padding: 12 }}>
-              <div style={{ fontSize: 10, color: t.textFaint, fontFamily: "'JetBrains Mono',monospace", marginBottom: 8 }}>{ch.title}</div>
+              <div style={{ fontSize: 10, color: t.textFaint, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", marginBottom: 8 }}>{ch.title}</div>
               <ResponsiveContainer width="100%" height={90}>
                 <LineChart data={ch.data}>
                   <CartesianGrid stroke={t.border} vertical={false} />
-                  <XAxis dataKey="d" tick={{ fill: t.textFaint, fontSize: 8, fontFamily: "'JetBrains Mono',monospace" }} axisLine={false} tickLine={false} interval={2} />
-                  <YAxis domain={[0, 10]} tick={{ fill: t.textFaint, fontSize: 8, fontFamily: "'JetBrains Mono',monospace" }} axisLine={false} tickLine={false} width={16} />
+                  <XAxis dataKey="d" tick={{ fill: t.textFaint, fontSize: 8, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }} axisLine={false} tickLine={false} interval={2} />
+                  <YAxis domain={[0, 10]} tick={{ fill: t.textFaint, fontSize: 8, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }} axisLine={false} tickLine={false} width={16} />
                   <Tooltip content={<ChartTip />} />
                   <Line type="monotone" dataKey="s" stroke={ch.color} strokeWidth={2} dot={{ r: 2.5, fill: ch.color, strokeWidth: 0 }} activeDot={{ r: 4, strokeWidth: 0 }} />
                 </LineChart>
@@ -1417,7 +2054,7 @@ function ChatPanel({ code, t }: any) {
             <div style={{ width: 28, height: 28, borderRadius: "50%", flexShrink: 0, background: m.role === "user" ? `linear-gradient(135deg,${t.blueDark},${t.blue})` : "linear-gradient(135deg,#7c3aed,#4f46e5)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, color: "#fff" }}>
               {m.role === "user" ? "U" : "G"}
             </div>
-            <div style={{ maxWidth: "75%", padding: "10px 14px", borderRadius: m.role === "user" ? "14px 4px 14px 14px" : "4px 14px 14px 14px", background: m.role === "user" ? `linear-gradient(135deg,${t.blueDark},${t.blue})` : t.card2, border: m.role === "user" ? "none" : `1px solid ${t.border}`, color: m.role === "user" ? "#fff" : t.text, fontSize: 12, lineHeight: 1.75, fontFamily: "'JetBrains Mono',monospace", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+            <div style={{ maxWidth: "75%", padding: "10px 14px", borderRadius: m.role === "user" ? "14px 4px 14px 14px" : "4px 14px 14px 14px", background: m.role === "user" ? `linear-gradient(135deg,${t.blueDark},${t.blue})` : t.card2, border: m.role === "user" ? "none" : `1px solid ${t.border}`, color: m.role === "user" ? "#fff" : t.text, fontSize: 12, lineHeight: 1.75, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
               {m.loading ? (
                 <div style={{ display: "flex", gap: 4 }}>
                   {[0, 0.2, 0.4].map((d, i) => <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: t.blue, animation: `pulse 1.2s ${d}s infinite` }} />)}
@@ -1431,7 +2068,7 @@ function ChatPanel({ code, t }: any) {
       {msgs.length <= 1 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
           {QUICK.map(q => (
-            <button key={q} onClick={() => send(q)} style={{ padding: "5px 12px", fontSize: 10, borderRadius: 20, background: "transparent", border: `1px solid ${t.border2}`, color: t.blue, cursor: "pointer", fontFamily: "'JetBrains Mono',monospace", transition: "all 0.18s" }}>
+            <button key={q} onClick={() => send(q)} style={{ padding: "5px 12px", fontSize: 10, borderRadius: 20, background: "transparent", border: `1px solid ${t.border2}`, color: t.blue, cursor: "pointer", fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", transition: "all 0.18s" }}>
               {q.length > 40 ? q.slice(0, 40) + "…" : q}
             </button>
           ))}
@@ -1444,7 +2081,7 @@ function ChatPanel({ code, t }: any) {
           onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
           placeholder="Ask about your code… (Enter to send)"
           rows={1}
-          style={{ flex: 1, background: "transparent", border: "none", outline: "none", resize: "none", color: t.text, fontFamily: "'JetBrains Mono',monospace", fontSize: 12, lineHeight: 1.6, maxHeight: 100 }}
+          style={{ flex: 1, background: "transparent", border: "none", outline: "none", resize: "none", color: t.text, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", fontSize: 12, lineHeight: 1.6, maxHeight: 100 }}
           onInput={e => { (e.target as any).style.height = "auto"; (e.target as any).style.height = Math.min((e.target as any).scrollHeight, 100) + "px"; }}
         />
         <button onClick={() => send()} disabled={loading || !input.trim()} style={{ width: 34, height: 34, borderRadius: 9, border: "none", cursor: "pointer", background: loading || !input.trim() ? t.border2 : `linear-gradient(135deg,${t.blueDark},${t.blue})`, color: "#fff", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.18s", flexShrink: 0 }}>
@@ -1470,8 +2107,8 @@ function ComplexityPanel({ results, t }: any) {
           { v: cc > 10 ? "High" : cc > 5 ? "Medium" : "Low", l: "Risk Level", c: cc > 10 ? t.red : cc > 5 ? t.orange : t.green },
         ].map(x => (
           <div key={x.l} className="score-hover" style={{ flex: 1, minWidth: 100, background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 14, textAlign: "center" }}>
-            <div style={{ fontSize: 24, fontWeight: 900, color: x.c, fontFamily: "'Syne',sans-serif" }}>{x.v}</div>
-            <div style={{ fontSize: 9, color: t.textFaint, marginTop: 4, fontFamily: "'JetBrains Mono',monospace", textTransform: "uppercase" as const, letterSpacing: "0.5px" }}>{x.l}</div>
+            <div style={{ fontSize: 24, fontWeight: 900, color: x.c, fontFamily: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>{x.v}</div>
+            <div style={{ fontSize: 9, color: t.textFaint, marginTop: 4, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", textTransform: "uppercase" as const, letterSpacing: "0.5px" }}>{x.l}</div>
           </div>
         ))}
       </div>
@@ -1480,15 +2117,15 @@ function ComplexityPanel({ results, t }: any) {
           const lc = LVL[item.level];
           return (
             <div key={item.fn} className="card-hover" style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 16, animation: `fadeUp 0.3s ${i * 0.08}s both` }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: t.text, fontFamily: "'JetBrains Mono',monospace", marginBottom: 8 }}>{item.fn}</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: t.text, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", marginBottom: 8 }}>{item.fn}</div>
               <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
-                <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 4, background: lc.tag, color: lc.tc, fontFamily: "'JetBrains Mono',monospace" }}>{item.notation} · {item.level.charAt(0).toUpperCase() + item.level.slice(1)}</span>
-                <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 4, background: lc.tag, color: lc.tc, fontFamily: "'JetBrains Mono',monospace" }}>CC: {item.cc}</span>
+                <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 4, background: lc.tag, color: lc.tc, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>{item.notation} · {item.level.charAt(0).toUpperCase() + item.level.slice(1)}</span>
+                <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 4, background: lc.tag, color: lc.tc, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>CC: {item.cc}</span>
               </div>
               <div style={{ height: 5, background: t.border, borderRadius: 3, marginBottom: 8 }}>
                 <div style={{ height: 5, width: `${item.pct}%`, background: lc.bar, borderRadius: 3, boxShadow: `0 0 8px ${lc.bar}50`, transition: "width 0.9s cubic-bezier(0.22,1,0.36,1)" }} />
               </div>
-              <div style={{ fontSize: 10, color: t.textFaint, fontFamily: "'JetBrains Mono',monospace", lineHeight: 1.6 }}>💡 {item.tip}</div>
+              <div style={{ fontSize: 10, color: t.textFaint, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", lineHeight: 1.6 }}>💡 {item.tip}</div>
             </div>
           );
         })}
@@ -1511,33 +2148,33 @@ function HistoryPanel({ t, onRestoreCode }: any) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       {historyList.length === 0 && (
-        <div style={{ padding: "20px", textAlign: "center", color: t.textFaint, fontFamily: "'JetBrains Mono',monospace", fontSize: 12 }}>
+        <div style={{ padding: "20px", textAlign: "center", color: t.textFaint, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", fontSize: 12 }}>
           No scan history yet. Run a scan to save results.
         </div>
       )}
       {historyList.map((h: any, idx: number) => (
         <div key={h.id || idx} className="card-hover" style={{ background: t.card, border: `1px solid ${sel?.id === h.id ? t.blue : t.border}`, borderRadius: 12, padding: 14, cursor: "pointer", animation: `slideLeft 0.25s ${Math.min(idx, 10) * 0.06}s both` }} onClick={() => setSel(sel?.id === h.id ? null : h)}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 10, color: t.textFaint, fontFamily: "'JetBrains Mono',monospace" }}>
+            <span style={{ fontSize: 10, color: t.textFaint, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
               {new Date(h.timestamp || h.date || Date.now()).toLocaleString()}
             </span>
-            <span style={{ fontSize: 10, padding: "1px 8px", borderRadius: 4, background: `${t.blue}15`, color: t.blue, fontFamily: "'JetBrains Mono',monospace" }}>{h.language || "Unknown"}</span>
+            <span style={{ fontSize: 10, padding: "1px 8px", borderRadius: 4, background: `${t.blue}15`, color: t.blue, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>{h.language || "Unknown"}</span>
             {(h.critical || h.results?.critical) > 0 && (
-              <span style={{ fontSize: 10, padding: "1px 8px", borderRadius: 4, background: t.redBg, color: t.redText, fontFamily: "'JetBrains Mono',monospace" }}>
+              <span style={{ fontSize: 10, padding: "1px 8px", borderRadius: 4, background: t.redBg, color: t.redText, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
                 {h.critical || h.results?.critical} critical
               </span>
             )}
           </div>
-          <div style={{ fontSize: 11, color: t.textDim, fontFamily: "'JetBrains Mono',monospace" }}>
+          <div style={{ fontSize: 11, color: t.textDim, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
             {(h.codeSnippet || "").slice(0, 60)}{(h.codeSnippet || "").length > 60 ? "…" : ""}
           </div>
           {sel?.id === h.id && (
             <div style={{ display: "flex", gap: 8, marginTop: 10 }} onClick={e => e.stopPropagation()}>
               <button onClick={e => { e.stopPropagation(); onRestoreCode(h.codeSnippet, h.language); }}
-                style={{ padding: "5px 12px", fontSize: 11, borderRadius: 8, cursor: "pointer", background: `linear-gradient(135deg,${t.blueDark},${t.blue})`, color: "#fff", border: "none", fontFamily: "'JetBrains Mono',monospace", fontWeight: 600 }}>
+                style={{ padding: "5px 12px", fontSize: 11, borderRadius: 8, cursor: "pointer", background: `linear-gradient(135deg,${t.blueDark},${t.blue})`, color: "#fff", border: "none", fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", fontWeight: 600 }}>
                 Load Code
               </button>
-              <button style={{ padding: "5px 12px", fontSize: 11, borderRadius: 8, cursor: "pointer", background: "transparent", border: `1px solid ${t.border2}`, color: t.textFaint, fontFamily: "'JetBrains Mono',monospace" }}
+              <button style={{ padding: "5px 12px", fontSize: 11, borderRadius: 8, cursor: "pointer", background: "transparent", border: `1px solid ${t.border2}`, color: t.textFaint, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}
                 onClick={e => { e.stopPropagation(); setSel(null); }}>
                 Close
               </button>
@@ -1565,8 +2202,8 @@ function SettingsPanel({ settings, onSettingsChange, t, themeName, setTheme }: a
   const Row = ({ label, desc, children }: any) => (
     <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: `1px solid ${t.border}` }}>
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 12, color: t.text, fontFamily: "'JetBrains Mono',monospace", fontWeight: 500 }}>{label}</div>
-        {desc && <div style={{ fontSize: 10, color: t.textFaint, fontFamily: "'JetBrains Mono',monospace", marginTop: 2 }}>{desc}</div>}
+        <div style={{ fontSize: 12, color: t.text, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", fontWeight: 500 }}>{label}</div>
+        {desc && <div style={{ fontSize: 10, color: t.textFaint, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", marginTop: 2 }}>{desc}</div>}
       </div>
       {children}
     </div>
@@ -1578,13 +2215,13 @@ function SettingsPanel({ settings, onSettingsChange, t, themeName, setTheme }: a
 
   return (
     <div style={{ maxWidth: 600 }}>
-      <div style={{ fontSize: 9, color: t.textFaint, textTransform: "uppercase" as const, letterSpacing: "0.8px", marginBottom: 12, fontFamily: "'JetBrains Mono',monospace" }}>── Appearance ──</div>
+      <div style={{ fontSize: 9, color: t.textFaint, textTransform: "uppercase" as const, letterSpacing: "0.8px", marginBottom: 12, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>── Appearance ──</div>
       <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 12, color: t.text, fontFamily: "'JetBrains Mono',monospace", fontWeight: 500, marginBottom: 10 }}>Theme</div>
+        <div style={{ fontSize: 12, color: t.text, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", fontWeight: 500, marginBottom: 10 }}>Theme</div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {[{ key: "dark", label: "🌙 Dark" }, { key: "cyberpunk", label: "⚡ Cyberpunk" }, { key: "light", label: "☀️ Light" }].map(th => (
+          {[{ key: "dark", label: "🌙 Dark" }, { key: "light", label: "☀️ Light" }].map(th => (
             <div key={th.key} onClick={() => setTheme(th.key)} style={{ padding: "9px 16px", borderRadius: 10, cursor: "pointer", background: themeName === th.key ? `${t.blue}15` : t.card, border: `1px solid ${themeName === th.key ? t.blue : t.border}`, transition: "all 0.18s", flex: 1 }}>
-              <div style={{ fontSize: 13, color: themeName === th.key ? t.blue : t.text, fontFamily: "'JetBrains Mono',monospace", fontWeight: themeName === th.key ? 700 : 400 }}>{th.label}</div>
+              <div style={{ fontSize: 13, color: themeName === th.key ? t.blue : t.text, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", fontWeight: themeName === th.key ? 700 : 400 }}>{th.label}</div>
             </div>
           ))}
         </div>
@@ -1592,7 +2229,7 @@ function SettingsPanel({ settings, onSettingsChange, t, themeName, setTheme }: a
       <Row label="Font Size" desc={`Editor font: ${settings.fontSize}px`}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, width: 180 }}>
           <input type="range" min={11} max={18} value={settings.fontSize} onChange={e => upd("fontSize", +e.target.value)} style={{ flex: 1, accentColor: t.blue, cursor: "pointer" }} />
-          <span style={{ fontSize: 11, color: t.blue, fontFamily: "'JetBrains Mono',monospace", minWidth: 28 }}>{settings.fontSize}px</span>
+          <span style={{ fontSize: 11, color: t.blue, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", minWidth: 28 }}>{settings.fontSize}px</span>
         </div>
       </Row>
       <Row label="3D Particles" desc="WebGL background effect"><Toggle val={settings.particlesEnabled} onChange={(v: boolean) => upd("particlesEnabled", v)} /></Row>
@@ -1603,10 +2240,7 @@ function SettingsPanel({ settings, onSettingsChange, t, themeName, setTheme }: a
       <Row label="Save History" desc="Store last 20 scans locally"><Toggle val={settings.saveHistory} onChange={(v: boolean) => upd("saveHistory", v)} /></Row>
       <div style={{ marginTop: 20, display: "flex", gap: 10 }}>
         <button onClick={save} className="btn-primary" style={{ padding: "9px 20px", fontSize: 12, fontWeight: 700 }}>{saved ? "✓ Saved!" : "Save Settings"}</button>
-        <button onClick={() => onSettingsChange(DEFAULT_SETTINGS)} style={{ padding: "9px 16px", fontSize: 12, background: "transparent", border: `1px solid ${t.border2}`, borderRadius: 8, color: t.textFaint, fontFamily: "'JetBrains Mono',monospace", cursor: "pointer" }}>Reset</button>
-      </div>
-      <div style={{ marginTop: 16, padding: "10px 14px", background: t.card, border: `1px solid ${t.border}`, borderRadius: 10, fontSize: 10, color: t.textFaint, fontFamily: "'JetBrains Mono',monospace", lineHeight: 1.8 }}>
-        Guru AI v2.0 · Claude Sonnet 4.6 · Firebase Auth · EmailJS OTP
+        <button onClick={() => onSettingsChange(DEFAULT_SETTINGS)} style={{ padding: "9px 16px", fontSize: 12, background: "transparent", border: `1px solid ${t.border2}`, borderRadius: 8, color: t.textFaint, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", cursor: "pointer" }}>Reset</button>
       </div>
     </div>
   );
@@ -1626,8 +2260,8 @@ function GitHubPanel({ t }: any) {
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 16px", background: `${t.blue}08`, border: `1px solid ${t.blue}20`, borderRadius: 10, flexWrap: "wrap" }}>
         <div style={{ width: 8, height: 8, borderRadius: "50%", background: t.green, boxShadow: `0 0 6px ${t.green}` }} />
-        <span style={{ fontSize: 12, color: t.blue, fontFamily: "'JetBrains Mono',monospace" }}>Connected: <strong>rahulkumar/auth-service</strong></span>
-        <button style={{ marginLeft: "auto", padding: "5px 12px", fontSize: 11, border: `1px solid ${t.blue}40`, background: `${t.blue}10`, color: t.blue, borderRadius: 6, cursor: "pointer", fontFamily: "'JetBrains Mono',monospace" }}>+ Import Repo</button>
+        <span style={{ fontSize: 12, color: t.blue, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>Connected: <strong>rahulkumar/auth-service</strong></span>
+        <button style={{ marginLeft: "auto", padding: "5px 12px", fontSize: 11, border: `1px solid ${t.blue}40`, background: `${t.blue}10`, color: t.blue, borderRadius: 6, cursor: "pointer", fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>+ Import Repo</button>
       </div>
       {PRS.map((pr: any, idx: number) => {
         const sc = PR_STATUS[pr.status];
@@ -1636,17 +2270,17 @@ function GitHubPanel({ t }: any) {
         return (
           <div key={pr.num} className="card-hover" style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 14, animation: `slideLeft 0.25s ${idx * 0.08}s both` }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 10, color: t.textFaint, fontFamily: "'JetBrains Mono',monospace" }}>#{pr.num}</span>
+              <span style={{ fontSize: 10, color: t.textFaint, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>#{pr.num}</span>
               <span style={{ fontSize: 13, fontWeight: 500, color: t.text, flex: 1 }}>{pr.title}</span>
-              <span style={{ fontSize: 9, padding: "2px 9px", borderRadius: 4, background: sc.bg, color: sc.text, fontFamily: "'JetBrains Mono',monospace", textTransform: "capitalize" as const }}>{pr.status}</span>
+              <span style={{ fontSize: 9, padding: "2px 9px", borderRadius: 4, background: sc.bg, color: sc.text, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", textTransform: "capitalize" as const }}>{pr.status}</span>
             </div>
-            <div style={{ fontSize: 10, color: t.textFaint, fontFamily: "'JetBrains Mono',monospace", marginBottom: 10 }}>+{pr.adds} lines · {pr.files} files · @{pr.author}</div>
+            <div style={{ fontSize: 10, color: t.textFaint, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", marginBottom: 10 }}>+{pr.adds} lines · {pr.files} files · @{pr.author}</div>
             <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-              {pr.crit > 0 && <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 4, background: t.redBg, color: t.redText, fontFamily: "'JetBrains Mono',monospace" }}>{pr.crit} critical</span>}
-              {pr.warn > 0 && <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 4, background: t.orangeBg, color: t.orange, fontFamily: "'JetBrains Mono',monospace" }}>{pr.warn} warnings</span>}
-              {!pr.crit && !pr.warn && !isDone && <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 4, background: t.greenBg, color: t.green, fontFamily: "'JetBrains Mono',monospace" }}>Clean</span>}
-              {isDone && <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 4, background: t.greenBg, color: t.green, fontFamily: "'JetBrains Mono',monospace" }}>✓ AI Scanned</span>}
-              <button style={{ marginLeft: "auto", padding: "5px 12px", fontSize: 10, border: `1px solid ${t.blue}40`, background: `${t.blue}10`, color: t.blue, borderRadius: 6, cursor: "pointer", fontFamily: "'JetBrains Mono',monospace" }} onClick={() => scan(pr.num)} disabled={isScan || isDone}>
+              {pr.crit > 0 && <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 4, background: t.redBg, color: t.redText, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>{pr.crit} critical</span>}
+              {pr.warn > 0 && <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 4, background: t.orangeBg, color: t.orange, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>{pr.warn} warnings</span>}
+              {!pr.crit && !pr.warn && !isDone && <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 4, background: t.greenBg, color: t.green, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>Clean</span>}
+              {isDone && <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 4, background: t.greenBg, color: t.green, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>✓ AI Scanned</span>}
+              <button style={{ marginLeft: "auto", padding: "5px 12px", fontSize: 10, border: `1px solid ${t.blue}40`, background: `${t.blue}10`, color: t.blue, borderRadius: 6, cursor: "pointer", fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }} onClick={() => scan(pr.num)} disabled={isScan || isDone}>
                 {isScan ? <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Spinner size={10} color={t.blue} /> Scanning...</span> : isDone ? "✓ Done" : "AI Scan"}
               </button>
             </div>
@@ -1660,89 +2294,7 @@ function GitHubPanel({ t }: any) {
 // ─────────────────────────────────────────────────────────────────
 // EXPORT PANEL
 // ─────────────────────────────────────────────────────────────────
-function ExportPanel({ results, t }: any) {
-  const [exp, setExp] = useState(false);
-  const [done, setDone] = useState(false);
-  const go = () => { setExp(true); setTimeout(() => { setExp(false); setDone(true); }, 2200); };
-  const rows = [
-    { k: "Date",     v: new Date().toLocaleDateString() },
-    { k: "Security", v: `${results?.scores?.security?.toFixed(1) || "N/A"}/10`, d: true },
-    { k: "Issues",   v: `${(results?.critical || 0) + (results?.warnings || 0)} total`, d: (results?.critical || 0) > 0 },
-    { k: "Complexity", v: `CC: ${results?.complexity?.cyclomatic || "N/A"}` },
-    { k: "Lines",    v: `${results?.lines || 0}` },
-    { k: "Includes", v: "Charts, AST, AI fixes" },
-  ];
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <div className="card-hover" style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 20 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: t.text, marginBottom: 14, fontFamily: "'JetBrains Mono',monospace" }}>📄 Report Preview</div>
-        {rows.map(r => (
-          <div key={r.k} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: `1px solid ${t.border}`, fontSize: 12, fontFamily: "'JetBrains Mono',monospace" }}>
-            <span style={{ color: t.textFaint }}>{r.k}</span>
-            <span style={{ color: (r as any).d ? t.red : t.textDim, fontWeight: 500 }}>{r.v}</span>
-          </div>
-        ))}
-      </div>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <button className="btn-primary" style={{ padding: "11px 20px", fontSize: 12, display: "flex", alignItems: "center", gap: 8 }} onClick={go} disabled={exp || done}>
-          {exp ? <><Spinner color="#fff" size={14} /> Generating...</> : done ? "✓ Exported!" : "Download PDF"}
-        </button>
-        {["Email", "Share Link"].map(l => (
-          <button key={l} style={{ padding: "11px 14px", fontSize: 12, background: "transparent", border: `1px solid ${t.border2}`, borderRadius: 8, color: t.textDim, fontFamily: "'JetBrains Mono',monospace", cursor: "pointer" }}>{l}</button>
-        ))}
-      </div>
-      {done && (
-        <div style={{ padding: "10px 14px", background: t.greenBg, border: `1px solid ${t.green}30`, borderRadius: 10, fontSize: 11, color: t.green, fontFamily: "'JetBrains Mono',monospace", animation: "fadeUp 0.3s both" }}>
-          ✓ Saved as guru-ai-report-{new Date().toISOString().slice(0, 10)}.pdf
-        </div>
-      )}
-    </div>
-  );
-}
 
-// ─────────────────────────────────────────────────────────────────
-// TECH DEBT PANEL
-// ─────────────────────────────────────────────────────────────────
-function DebtPanel({ results, t }: any) {
-  const crit  = results?.critical || 3;
-  const warn  = results?.warnings || 2;
-  const total = crit * 6 + warn * 4 + 2 + 2;
-  const items = [
-    { icon: "🔒", label: "Security vulnerabilities", hours: crit * 2, pct: Math.min(100, crit * 25), color: t.red },
-    { icon: "🔄", label: "Complexity refactoring",   hours: 4,         pct: 55,                        color: t.orange },
-    { icon: "🗑️", label: "Dead code removal",         hours: 2,         pct: 25,                        color: t.blue },
-    { icon: "📝", label: "Documentation gaps",        hours: 2,         pct: 15,                        color: t.green },
-  ];
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-        {[
-          { v: crit > 3 ? "High" : crit > 1 ? "Medium" : "Low", l: "Debt Level",    c: crit > 3 ? t.red : crit > 1 ? t.orange : t.green },
-          { v: `${total} hrs`,                                   l: "Est. Refactor", c: t.text },
-          { v: `${Math.min(10, crit * 2 + warn * 0.8).toFixed(1)}/10`, l: "Risk Score", c: crit > 2 ? t.red : t.orange },
-        ].map(x => (
-          <div key={x.l} className="score-hover" style={{ flex: 1, minWidth: 100, background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: 14, textAlign: "center" }}>
-            <div style={{ fontSize: 24, fontWeight: 900, color: x.c, fontFamily: "'Syne',sans-serif" }}>{x.v}</div>
-            <div style={{ fontSize: 9, color: t.textFaint, marginTop: 4, fontFamily: "'JetBrains Mono',monospace", textTransform: "uppercase" as const, letterSpacing: "0.5px" }}>{x.l}</div>
-          </div>
-        ))}
-      </div>
-      {items.map((item, i) => (
-        <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 12, background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: "12px 16px", animation: `slideLeft 0.25s ${i * 0.07}s both` }}>
-          <span style={{ fontSize: 18, flexShrink: 0 }}>{item.icon}</span>
-          <span style={{ fontSize: 12, color: t.textDim, flex: 1, fontFamily: "'JetBrains Mono',monospace" }}>{item.label}</span>
-          <div style={{ flex: 1, minWidth: 80, height: 5, background: t.border, borderRadius: 3 }}>
-            <div style={{ height: 5, width: `${item.pct}%`, background: item.color, borderRadius: 3, boxShadow: `0 0 6px ${item.color}50` }} />
-          </div>
-          <span style={{ fontSize: 12, fontWeight: 700, color: item.color, fontFamily: "'JetBrains Mono',monospace", minWidth: 44, textAlign: "right" }}>{item.hours} hrs</span>
-        </div>
-      ))}
-      <div style={{ padding: "12px 16px", background: `${t.blue}08`, border: `1px solid ${t.blue}20`, borderRadius: 12, fontSize: 12, color: t.blue, fontFamily: "'JetBrains Mono',monospace", lineHeight: 1.7 }}>
-        💡 Estimated cost @₹1,200/hr: <strong style={{ color: t.text }}>₹{(total * 1200).toLocaleString()}</strong>
-      </div>
-    </div>
-  );
-}
 
 // ─────────────────────────────────────────────────────────────────
 // USER CARD
@@ -1758,12 +2310,12 @@ function UserCard({ user, t, onLogout }: any) {
           <div style={{ position: "absolute", bottom: 0, right: 0, width: 10, height: 10, borderRadius: "50%", background: t.green, border: `2px solid ${t.card}`, boxShadow: `0 0 6px ${t.green}` }} />
         </div>
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontSize: 12, color: t.text, fontWeight: 700, fontFamily: "'JetBrains Mono',monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.name}</div>
-          <div style={{ fontSize: 9, color: t.textFaint, fontFamily: "'JetBrains Mono',monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.email}</div>
+          <div style={{ fontSize: 12, color: t.text, fontWeight: 700, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.name}</div>
+          <div style={{ fontSize: 9, color: t.textFaint, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.email}</div>
         </div>
       </div>
       <button onClick={onLogout}
-        style={{ width: "100%", padding: "7px", fontSize: 11, background: `${t.red}10`, border: `1px solid ${t.red}30`, borderRadius: 8, color: t.redText, fontFamily: "'JetBrains Mono',monospace", cursor: "pointer", fontWeight: 600, transition: "all 0.18s" }}
+        style={{ width: "100%", padding: "7px", fontSize: 11, background: `${t.red}10`, border: `1px solid ${t.red}30`, borderRadius: 8, color: t.redText, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", cursor: "pointer", fontWeight: 600, transition: "all 0.18s" }}
         onMouseEnter={e => { (e.currentTarget as any).style.background = t.redBg; }}
         onMouseLeave={e => { (e.currentTarget as any).style.background = `${t.red}10`; }}>
         Sign Out
@@ -1784,8 +2336,6 @@ const NAV_CFG = [
   { id: "chat",       label: "AI Chat",      icon: "💬" },
   { id: "github",     label: "GitHub PR",    icon: "🔗" },
   { id: "history",    label: "Scan History", icon: "🕐" },
-  { id: "debt",       label: "Tech Debt",    icon: "💰" },
-  { id: "export",     label: "Export PDF",   icon: "📄" },
   { id: "settings",   label: "Settings",     icon: "⚙️" },
 ];
 
@@ -1793,11 +2343,18 @@ const NAV_CFG = [
 // MAIN APP
 // ─────────────────────────────────────────────────────────────────
 export default function App() {
-  const [user, setUser]          = useState<any>(null);
+  const [user, setUser]          = useState<any>(() => {
+    try {
+      const stored = localStorage.getItem("guru_ai_user") || sessionStorage.getItem("guru_ai_user");
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
   const [themeName, setThemeName] = useState("dark");
   const [settings, setSettings]  = useState(loadSettings);
   const [tab, setTab]            = useState("editor");
-  const [code, setCode]          = useState(SAMPLE);
+  const [code, setCode]          = useState("");
   const [language, setLanguage]  = useState("JavaScript");
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeStep, setAStep]  = useState("");
@@ -1807,8 +2364,47 @@ export default function App() {
   const [fixedCode, setFixedCode] = useState("");
   const [optCode, setOptCode]    = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
 
   const t = THEMES[themeName] || THEMES.dark;
+
+  const handleLogin = (u: any) => {
+    localStorage.setItem("guru_ai_user", JSON.stringify(u));
+    setUser(u);
+  };
+
+  const handleLogout = async () => {
+    try {
+      if (fbAuth) await signOut(fbAuth);
+    } catch (e) {
+      console.warn("SignOut failed:", e);
+    }
+    localStorage.removeItem("guru_ai_user");
+    sessionStorage.removeItem("guru_ai_user");
+    setUser(null);
+  };
+
+  // Firebase auth state persistence — keeps user logged in on refresh
+  useEffect(() => {
+    if (!fbAuth) return;
+    const unsub = onAuthStateChanged(fbAuth, (firebaseUser) => {
+      if (firebaseUser) {
+        const u = {
+          name: firebaseUser.displayName || firebaseUser.email || "User",
+          email: firebaseUser.email || "",
+          photo: firebaseUser.photoURL || null,
+          uid: firebaseUser.uid,
+        };
+        localStorage.setItem("guru_ai_user", JSON.stringify(u));
+        setUser(u);
+      } else {
+        // Only clear if no localStorage backup exists
+        const stored = localStorage.getItem("guru_ai_user");
+        if (!stored) setUser(null);
+      }
+    });
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     if (settings.theme && settings.theme !== themeName) setThemeName(settings.theme);
@@ -1828,7 +2424,8 @@ export default function App() {
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); analyze(); }
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "T") { e.preventDefault(); setThemeName(n => n === "dark" ? "cyberpunk" : n === "cyberpunk" ? "light" : "dark"); }
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "T") { e.preventDefault(); setThemeName(n => n === "dark" ? "light" : "dark"); }
+      if (e.key === "Escape") { setIsFullScreen(false); }
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
@@ -1837,6 +2434,8 @@ export default function App() {
   const analyze = useCallback(async () => {
     if (analyzing || code.trim().length < 10) return;
     setAnalyzing(true);
+    setFixedCode("");
+    setOptCode("");
     const steps = ["Parsing AST...", "AI Code Review...", "Complexity Analysis...", "Generating Report...", "Done!"];
     let i = 0;
     setAStep(steps[0]);
@@ -1970,89 +2569,87 @@ ${code.slice(0, 3000)}
   const goExplain = (q: string)  => { switchTab("chat"); };
   const issueCount = results ? (results.critical || 0) + (results.warnings || 0) : 0;
 
-  if (!user) return <LoginScreen onLogin={setUser} t={t} />;
+  if (!user) return <LoginScreen onLogin={handleLogin} t={t} />;
 
   const panels: Record<string, any> = {
-    editor:     <EditorPanel code={code} setCode={setCode} onAnalyze={analyze} analyzing={analyzing} analyzeStep={analyzeStep} results={results} language={language} setLanguage={setLanguage} t={t} settings={settings} onFix={handleFix} onOptimize={handleOptimize} fixedCode={fixedCode} optimizedCode={optCode} />,
+    editor:     <EditorPanel code={code} setCode={setCode} onAnalyze={analyze} analyzing={analyzing} analyzeStep={analyzeStep} results={results} language={language} setLanguage={setLanguage} t={t} settings={settings} onFix={handleFix} onOptimize={handleOptimize} fixedCode={fixedCode} optimizedCode={optCode} isFullScreen={isFullScreen} setIsFullScreen={setIsFullScreen} setMobileOpen={setMobileOpen} />,
     overview:   <OverviewPanel results={results} t={t} />,
     issues:     <IssuesPanel results={results} onExplain={goExplain} t={t} />,
     complexity: <ComplexityPanel results={results} t={t} />,
     chat:       <ChatPanel code={code} t={t} />,
     github:     <GitHubPanel t={t} />,
     history:    <HistoryPanel t={t} onRestoreCode={(c: string, l: string) => { setCode(c); setLanguage(l); switchTab("editor"); }} />,
-    debt:       <DebtPanel results={results} t={t} />,
     tcanalysis: <TCAnalysisPanel code={code} language={language} t={t} />,
-    export:     <ExportPanel results={results} t={t} />,
     settings:   <SettingsPanel settings={settings} onSettingsChange={setSettings} t={t} themeName={themeName} setTheme={(tn: string) => { setThemeName(tn); setSettings((s: any) => ({ ...s, theme: tn })); }} />,
   };
 
   return (
-    <div style={{ display: "flex", height: "100vh", width: "100vw", background: t.panelBg, overflow: "hidden", fontFamily: "'JetBrains Mono',monospace", color: t.text, position: "relative" }}>
+    <div style={{ display: "flex", height: "100vh", width: "100vw", background: t.panelBg, overflow: "hidden", fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", color: t.text, position: "relative" }}>
       {settings.particlesEnabled && <ThreeBackground theme={themeName} />}
       {toast && <Toast msg={toast.msg} type={toast.type} t={t} />}
       {analyzing && <ScanOverlay step={analyzeStep} t={t} />}
 
       {/* Sidebar */}
-      <div className="sidebar-desktop" style={{ width: 215, minWidth: 215, background: t.sidebar, borderRight: `1px solid ${t.border}`, display: "flex", flexDirection: "column", zIndex: 10, boxShadow: `4px 0 24px rgba(0,0,0,0.2)`, backdropFilter: "blur(20px)" }}>
-        <div style={{ padding: "16px 16px 12px", borderBottom: `1px solid ${t.border}` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 34, height: 34, borderRadius: 10, background: `linear-gradient(135deg,${t.blueDark},${t.blue})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 900, color: "#fff", flexShrink: 0, boxShadow: `0 4px 14px ${t.blue}50`, animation: "glow 3s infinite", fontFamily: "'Syne',sans-serif" }}>G</div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 900, color: t.text, fontFamily: "'Syne',sans-serif", letterSpacing: "-0.5px" }}>Guru AI</div>
-              <div style={{ fontSize: 8, color: t.textGhost, letterSpacing: "0.3px" }}>v2.0 · production</div>
-            </div>
-            <div onClick={() => setThemeName(n => n === "dark" ? "light" : n === "light" ? "cyberpunk" : "dark")} title="Toggle theme" style={{ width: 28, height: 16, borderRadius: 8, background: themeName === "dark" ? t.blueDark : t.border2, cursor: "pointer", position: "relative", transition: "background 0.25s", flexShrink: 0 }}>
-              <div style={{ position: "absolute", width: 12, height: 12, background: "#fff", borderRadius: "50%", top: 2, left: themeName === "dark" ? 13 : 2, transition: "left 0.25s cubic-bezier(0.22,1,0.36,1)", boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }} />
+      {!isFullScreen && (
+        <div className="sidebar-desktop" style={{ width: 215, minWidth: 215, background: t.sidebar, borderRight: `1px solid ${t.border}`, display: "flex", flexDirection: "column", zIndex: 10, boxShadow: `4px 0 24px rgba(0,0,0,0.2)`, backdropFilter: "blur(20px)" }}>
+          <div style={{ padding: "16px 16px 12px", borderBottom: `1px solid ${t.border}` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <img src={GURU_LOGO_URL} alt="Guru AI Logo" style={{ width: 34, height: 34, borderRadius: "50%", objectFit: "cover", flexShrink: 0, boxShadow: `0 4px 14px ${t.blue}50`, animation: "glow 3s infinite", border: `2px solid ${t.blue}30` }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 900, color: t.text, fontFamily: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", letterSpacing: "-0.5px", display: "flex", alignItems: "center", gap: 6 }}>Guru AI</div>
+              </div>
+              <div onClick={() => setThemeName(n => n === "dark" ? "light" : "dark")} title="Toggle theme" style={{ width: 28, height: 16, borderRadius: 8, background: themeName === "dark" ? t.blueDark : t.border2, cursor: "pointer", position: "relative", transition: "background 0.25s", flexShrink: 0 }}>
+                <div style={{ position: "absolute", width: 12, height: 12, background: "#fff", borderRadius: "50%", top: 2, left: themeName === "dark" ? 13 : 2, transition: "left 0.25s cubic-bezier(0.22,1,0.36,1)", boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }} />
+              </div>
             </div>
           </div>
+
+          <nav style={{ flex: 1, padding: "6px 0", overflowY: "auto" }}>
+            {NAV_CFG.map(item => {
+              const active = item.id === tab;
+              return (
+                <div key={item.id} className={`nav-item${active ? " active" : ""}`}
+                  style={{ color: active ? t.blue : t.textDim, background: active ? t.navActive : "transparent", borderLeftColor: active ? t.accent : "transparent" }}
+                  onClick={() => switchTab(item.id)}>
+                  <span style={{ fontSize: 14, lineHeight: 1, flexShrink: 0 }}>{item.icon}</span>
+                  <span>{item.label}</span>
+                  {item.id === "issues" && results && issueCount > 0 && <span style={{ marginLeft: "auto", fontSize: 9, padding: "1px 6px", borderRadius: 20, background: t.redBg, color: t.redText, fontWeight: 700 }}>{issueCount}</span>}
+                  {item.id === "history" && <span style={{ marginLeft: "auto", fontSize: 9, color: t.textFaint }}>{loadHistory().length}</span>}
+                </div>
+              );
+            })}
+          </nav>
+
+          <UserCard user={user} t={t} onLogout={handleLogout} />
         </div>
-
-        <nav style={{ flex: 1, padding: "6px 0", overflowY: "auto" }}>
-          {NAV_CFG.map(item => {
-            const active = item.id === tab;
-            return (
-              <div key={item.id} className={`nav-item${active ? " active" : ""}`}
-                style={{ color: active ? t.blue : t.textDim, background: active ? t.navActive : "transparent", borderLeftColor: active ? t.accent : "transparent" }}
-                onClick={() => switchTab(item.id)}>
-                <span style={{ fontSize: 14, lineHeight: 1, flexShrink: 0 }}>{item.icon}</span>
-                <span>{item.label}</span>
-                {item.id === "issues" && results && issueCount > 0 && <span style={{ marginLeft: "auto", fontSize: 9, padding: "1px 6px", borderRadius: 20, background: t.redBg, color: t.redText, fontWeight: 700 }}>{issueCount}</span>}
-                {item.id === "history" && <span style={{ marginLeft: "auto", fontSize: 9, color: t.textFaint }}>{loadHistory().length}</span>}
-              </div>
-            );
-          })}
-        </nav>
-
-        <UserCard user={user} t={t} onLogout={() => { localStorage.clear(); sessionStorage.clear(); setUser(null); }} />
-      </div>
+      )}
 
       {/* Main content */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0, position: "relative", zIndex: 1 }}>
-        <div style={{ padding: "8px 14px", borderBottom: `1px solid ${t.border}`, display: "flex", alignItems: "center", gap: 8, background: t.headerBg, flexWrap: "wrap", backdropFilter: "blur(20px)", boxShadow: `0 2px 12px rgba(0,0,0,0.1)` }}>
-          <button className="mobile-only" style={{ padding: "6px 10px", background: "transparent", border: `1px solid ${t.border2}`, borderRadius: 6, color: t.textDim, cursor: "pointer", fontSize: 14, display: "none" }} onClick={() => setMobileOpen(true)}>☰</button>
-          <span style={{ fontSize: 10, padding: "3px 9px", borderRadius: 5, background: `${t.blue}15`, color: t.blue, fontWeight: 700, fontFamily: "'JetBrains Mono',monospace" }}>{language}</span>
-          <span style={{ fontSize: 10, padding: "3px 9px", borderRadius: 5, border: `1px solid ${t.border}`, color: t.textFaint, fontFamily: "'JetBrains Mono',monospace" }}>{code.split("\n").length} lines</span>
-          {results && <>
-            <span style={{ fontSize: 10, padding: "3px 9px", borderRadius: 5, background: t.redBg, color: t.redText, fontWeight: 700, fontFamily: "'JetBrains Mono',monospace" }}>{results.critical} critical</span>
-            <span style={{ fontSize: 10, padding: "3px 9px", borderRadius: 5, background: t.orangeBg, color: t.orange, fontWeight: 700, fontFamily: "'JetBrains Mono',monospace" }}>{results.warnings} warn</span>
-            <span style={{ fontSize: 10, padding: "3px 9px", borderRadius: 5, background: t.greenBg, color: t.green, fontWeight: 700, fontFamily: "'JetBrains Mono',monospace" }}>✓ Analyzed</span>
-          </>}
-          <button className="btn-primary" style={{ marginLeft: "auto", padding: "7px 16px", fontSize: 11, fontWeight: 700 }} onClick={() => { switchTab("editor"); setTimeout(analyze, 80); }} disabled={analyzing}>
-            {analyzing ? <span style={{ display: "flex", alignItems: "center", gap: 8 }}><Spinner color="#fff" size={11} /> {analyzeStep}</span> : "⚡ Run Analysis"}
-          </button>
-        </div>
+        {!isFullScreen && tab !== "editor" && (
+          <div style={{ padding: "8px 14px", borderBottom: `1px solid ${t.border}`, display: "flex", alignItems: "center", gap: 8, background: t.headerBg, flexWrap: "wrap", backdropFilter: "blur(20px)", boxShadow: `0 2px 12px rgba(0,0,0,0.1)` }}>
+            <button className="mobile-only" style={{ padding: "6px 10px", background: "transparent", border: `1px solid ${t.border2}`, borderRadius: 6, color: t.textDim, cursor: "pointer", fontSize: 14, display: "none" }} onClick={() => setMobileOpen(true)}>☰</button>
+            <span style={{ fontSize: 10, padding: "3px 9px", borderRadius: 5, background: `${t.blue}15`, color: t.blue, fontWeight: 700, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>{language}</span>
+            <span style={{ fontSize: 10, padding: "3px 9px", borderRadius: 5, border: `1px solid ${t.border}`, color: t.textFaint, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>{code.split("\n").length} lines</span>
+            {results && <>
+              <span style={{ fontSize: 10, padding: "3px 9px", borderRadius: 5, background: t.redBg, color: t.redText, fontWeight: 700, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>{results.critical} critical</span>
+              <span style={{ fontSize: 10, padding: "3px 9px", borderRadius: 5, background: t.orangeBg, color: t.orange, fontWeight: 700, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>{results.warnings} warn</span>
+              <span style={{ fontSize: 10, padding: "3px 9px", borderRadius: 5, background: t.greenBg, color: t.green, fontWeight: 700, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>✓ Analyzed</span>
+            </>}
+            <button className="btn-primary" style={{ marginLeft: "auto", padding: "10px 24px", fontSize: 12, fontWeight: 800, letterSpacing: "0.02em", minHeight: 38, display: "flex", alignItems: "center", gap: 7, boxShadow: `0 4px 20px ${t.accent}50, 0 2px 8px rgba(0,0,0,0.15)` }} onClick={() => { switchTab("editor"); setTimeout(analyze, 80); }} disabled={analyzing}>
+              {analyzing ? <span style={{ display: "flex", alignItems: "center", gap: 8 }}><Spinner color="#fff" size={12} /> {analyzeStep}</span> : "⚡ Run Analysis"}
+            </button>
+          </div>
+        )}
 
-        <div className="sidebar-desktop" style={{ display: "flex", borderBottom: `1px solid ${t.border}`, padding: "0 14px", background: t.headerBg, overflowX: "auto", flexShrink: 0, backdropFilter: "blur(20px)" }}>
-          {NAV_CFG.map(item => (
-            <div key={item.id} className={`tab-btn${item.id === tab ? " active" : ""}`}
-              style={{ color: item.id === tab ? t.blue : t.textFaint, borderBottomColor: item.id === tab ? t.accent : "transparent" }}
-              onClick={() => switchTab(item.id)}>
-              {item.icon} {item.label}{item.id === "issues" && issueCount > 0 ? ` (${issueCount})` : ""}
-            </div>
-          ))}
-        </div>
-        <div style={{ flex: 1, overflowY: "auto", padding: settings.compactMode ? "10px" : "16px", background: t.panelBg, paddingBottom: 80 }}>
-          <div key={panelKey} className={settings.animationsEnabled ? "panel-enter" : ""}>
+        <div style={{
+          flex: 1,
+          overflowY: isFullScreen ? "hidden" : "auto",
+          padding: isFullScreen ? "0" : (settings.compactMode ? "10px" : "16px"),
+          background: t.panelBg,
+          paddingBottom: isFullScreen ? "0" : 80
+        }}>
+          <div key={panelKey} className={isFullScreen ? "" : (settings.animationsEnabled ? "panel-enter" : "")} style={isFullScreen ? { height: "100%" } : undefined}>
             {panels[tab] || panels["editor"]}
           </div>
         </div>
@@ -2063,8 +2660,9 @@ ${code.slice(0, 3000)}
         <div className="mobile-only" style={{ position: "fixed", inset: 0, zIndex: 500, display: "flex" }}>
           <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)" }} onClick={() => setMobileOpen(false)} />
           <div style={{ position: "relative", width: 240, background: t.sidebar, padding: "16px 0", boxShadow: "4px 0 24px rgba(0,0,0,0.4)" }}>
-            <div style={{ padding: "0 16px 12px", borderBottom: `1px solid ${t.border}`, marginBottom: 6 }}>
-              <div style={{ fontFamily: "'Syne',sans-serif", fontSize: 18, fontWeight: 900, color: t.text }}>Guru AI</div>
+            <div style={{ padding: "0 16px 12px", borderBottom: `1px solid ${t.border}`, marginBottom: 6, display: "flex", alignItems: "center", gap: 8 }}>
+              <img src={GURU_LOGO_URL} alt="Guru AI Logo" style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover", boxShadow: `0 4px 14px ${t.blue}50`, border: `2px solid ${t.blue}30` }} />
+              <div style={{ fontFamily: "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", fontSize: 18, fontWeight: 900, color: t.text }}>Guru AI</div>
             </div>
             {NAV_CFG.map(item => (
               <div key={item.id} className="nav-item" style={{ color: item.id === tab ? t.blue : t.textDim, background: item.id === tab ? t.navActive : "transparent", borderLeftColor: item.id === tab ? t.accent : "transparent" }} onClick={() => switchTab(item.id)}>
@@ -2079,7 +2677,7 @@ ${code.slice(0, 3000)}
         {NAV_CFG.slice(0, 5).map(item => (
           <div key={item.id} onClick={() => switchTab(item.id)} style={{ flex: 1, padding: "10px 4px 8px", display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 2, cursor: "pointer", borderTop: `2px solid ${tab === item.id ? t.blue : "transparent"}`, transition: "all 0.18s", background: tab === item.id ? t.navActive : "transparent" }}>
             <span style={{ fontSize: 16 }}>{item.icon}</span>
-            <span style={{ fontSize: 9, fontFamily: "'JetBrains Mono',monospace", color: tab === item.id ? t.blue : t.textFaint }}>{item.label.split(" ")[0]}</span>
+            <span style={{ fontSize: 9, fontFamily: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", color: tab === item.id ? t.blue : t.textFaint }}>{item.label.split(" ")[0]}</span>
           </div>
         ))}
       </div>
