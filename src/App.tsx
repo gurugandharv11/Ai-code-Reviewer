@@ -13,7 +13,7 @@ import { signInWithPopup, onAuthStateChanged, signOut } from "firebase/auth";
 import { auth as fbAuth, googleProvider as fbProvider } from "./firebase";
 
 // Generated logo reference
-const GURU_LOGO_URL = "/@fs/C:/Users/gandharv/.gemini/antigravity/brain/df4dd913-78ce-41cc-b6be-a41794eeb028/guru_icon_1782841751825.png";
+const GURU_LOGO_URL = "/guru-icon.png";
 const FIREBASE_ENABLED = true;
 
 // ─────────────────────────────────────────────────────────────────
