@@ -1,6 +1,7 @@
 🚀 AI Code Reviewer
 
 An advanced AI-powered code analysis platform that reviews source code, detects vulnerabilities, checks complexity, suggests optimizations, and generates intelligent developer insights in real time.
+🌐 Live Demo: https://guru-aii.vercel.app/
 
 🌟 Features
 🔍 Smart AI Code Analysis
